@@ -368,3 +368,23 @@ export const SET_PASSWORD_MUTATION = `
     }
   }
 `;
+
+export const REQUEST_ADMIN_SMS_OTP_MUTATION = `
+  mutation RequestAdminSmsOtp($pendingTicket: String!, $phone: String) {
+    requestAdminSmsOtp(input: { pendingTicket: $pendingTicket, phone: $phone }) {
+      success
+      maskedPhone
+      requiresPhoneInput
+      cooldownSeconds
+    }
+  }
+`;
+
+export const VERIFY_ADMIN_SMS_OTP_MUTATION = `
+  mutation VerifyAdminSmsOtp($pendingTicket: String!, $code: String!) {
+    verifyAdminSmsOtp(input: { pendingTicket: $pendingTicket, code: $code }) {
+      authToken
+      refreshToken
+    }
+  }
+`;

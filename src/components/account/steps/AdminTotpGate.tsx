@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ShieldCheck, Copy, Check } from "lucide-react";
+import { Loader2, ShieldCheck, Copy, Check, MessageSquareText, KeyRound } from "lucide-react";
 import Image from "next/image";
+
+type AuthMethod = "totp" | "sms";
 
 export default function AdminTotpGate({
   pendingTicket,
@@ -13,6 +15,8 @@ export default function AdminTotpGate({
   requiresSetup: boolean;
 }) {
   const router = useRouter();
+  const [method, setMethod] = useState<AuthMethod>("totp");
+
   const [code, setCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState("");
@@ -21,6 +25,16 @@ export default function AdminTotpGate({
   const [isLoadingSetup, setIsLoadingSetup] = useState(requiresSetup);
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const [smsPhone, setSmsPhone] = useState("");
+  const [smsRequiresPhoneInput, setSmsRequiresPhoneInput] = useState(false);
+  const [smsMaskedPhone, setSmsMaskedPhone] = useState<string | null>(null);
+  const [smsCodeSent, setSmsCodeSent] = useState(false);
+  const [smsCode, setSmsCode] = useState("");
+  const [smsCooldown, setSmsCooldown] = useState(0);
+  const [isSendingSms, setIsSendingSms] = useState(false);
+  const [isVerifyingSms, setIsVerifyingSms] = useState(false);
+  const [smsError, setSmsError] = useState("");
 
   useEffect(() => {
     if (!requiresSetup) return;
@@ -36,6 +50,12 @@ export default function AdminTotpGate({
       })
       .finally(() => setIsLoadingSetup(false));
   }, [requiresSetup, pendingTicket]);
+
+  useEffect(() => {
+    if (smsCooldown <= 0) return;
+    const timer = setInterval(() => setSmsCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [smsCooldown]);
 
   const handleCopySecret = async () => {
     if (!setupData) return;
@@ -81,6 +101,99 @@ export default function AdminTotpGate({
     }
   };
 
+  const requestSmsCode = useCallback(
+    async (phoneOverride?: string) => {
+      setSmsError("");
+      setIsSendingSms(true);
+      try {
+        const res = await fetch("/api/auth/admin-sms/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pendingTicket, phone: phoneOverride }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          setSmsError(data?.error || "ارسال کد با خطا مواجه شد");
+          return;
+        }
+
+        if (data.requiresPhoneInput) {
+          setSmsRequiresPhoneInput(true);
+          setSmsCodeSent(false);
+          return;
+        }
+
+        setSmsRequiresPhoneInput(false);
+        setSmsMaskedPhone(data.maskedPhone ?? null);
+        setSmsCodeSent(true);
+        setSmsCooldown(data.cooldownSeconds ?? 60);
+      } catch {
+        setSmsError("خطا در ارتباط با سرور");
+      } finally {
+        setIsSendingSms(false);
+      }
+    },
+    [pendingTicket]
+  );
+
+  useEffect(() => {
+    if (method === "sms" && !smsCodeSent && !smsRequiresPhoneInput) {
+      requestSmsCode();
+    }
+  }, [method, smsCodeSent, smsRequiresPhoneInput, requestSmsCode]);
+
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = smsPhone.trim();
+    if (!/^09\d{9}$/.test(trimmed)) {
+      setSmsError("شماره موبایل را به‌درستی وارد کنید (مثلاً ۰۹۱۲۳۴۵۶۷۸۹)");
+      return;
+    }
+    await requestSmsCode(trimmed);
+  };
+
+  const handleSmsVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSmsError("");
+
+    if (smsCode.trim().length < 5) {
+      setSmsError("کد تأیید را کامل وارد کنید");
+      return;
+    }
+
+    setIsVerifyingSms(true);
+    try {
+      const res = await fetch("/api/auth/admin-sms/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pendingTicket, code: smsCode.trim() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSmsError(data?.error || "کد وارد شده صحیح نیست");
+        return;
+      }
+
+      router.refresh();
+    } catch {
+      setSmsError("خطا در ارتباط با سرور");
+    } finally {
+      setIsVerifyingSms(false);
+    }
+  };
+
+  const switchToSms = () => {
+    setMethod("sms");
+    setError("");
+  };
+
+  const switchToTotp = () => {
+    setMethod("totp");
+    setSmsError("");
+  };
+
   if (recoveryCodes) {
     return (
       <div className="flex flex-col gap-4 text-center">
@@ -100,6 +213,93 @@ export default function AdminTotpGate({
           className="bg-brand-blue hover:bg-[#0062d1] text-white font-bold py-3 transition-colors"
         >
           ذخیره کردم، برو به داشبورد
+        </button>
+      </div>
+    );
+  }
+
+  if (method === "sms") {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="text-center flex flex-col gap-1">
+          <MessageSquareText size={24} className="text-brand-blue mx-auto mb-1" />
+          <span className="text-sm font-bold text-white">ورود با کد پیامکی</span>
+          <span className="text-xs text-brand-m_khonsa">
+            {smsMaskedPhone
+              ? `کد تأیید به شماره ${smsMaskedPhone} پیامک شد.`
+              : "کد تأیید به شماره موبایل ثبت‌شده حساب شما پیامک می‌شود."}
+          </span>
+        </div>
+
+        {smsError && (
+          <p className="text-xs text-red-500 font-medium bg-red-500/10 border border-red-500/20 p-3 text-center">
+            {smsError}
+          </p>
+        )}
+
+        {smsRequiresPhoneInput ? (
+          <form onSubmit={handlePhoneSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-brand-surface_m">شماره موبایل برای ورود پیامکی</label>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={smsPhone}
+                onChange={(e) => setSmsPhone(e.target.value.replace(/[^\d]/g, ""))}
+                dir="ltr"
+                placeholder="09123456789"
+                maxLength={11}
+                className="w-full bg-brand-bg border border-brand-surface_hover pr-10 pl-3 py-3 text-sm text-brand-active text-left focus:outline-none focus:border-brand-blue transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isSendingSms}
+              className="bg-brand-blue hover:bg-[#0062d1] disabled:opacity-60 text-white font-bold py-3 flex items-center justify-center gap-2 transition-colors"
+            >
+              {isSendingSms && <Loader2 size={16} className="animate-spin" />}
+              {isSendingSms ? "در حال ارسال..." : "ارسال کد تأیید"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSmsVerify} className="flex flex-col gap-4">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={smsCode}
+              onChange={(e) => setSmsCode(e.target.value.replace(/[^\d]/g, ""))}
+              maxLength={5}
+              dir="ltr"
+              placeholder="⋅ ⋅ ⋅ ⋅ ⋅"
+              className="w-full bg-brand-bg border border-brand-surface_hover text-center tracking-[0.5em] py-3 text-xl text-brand-active focus:outline-none focus:border-brand-blue transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={isVerifyingSms || !smsCodeSent}
+              className="bg-brand-blue hover:bg-[#0062d1] disabled:opacity-60 text-white font-bold py-3 flex items-center justify-center gap-2 transition-colors"
+            >
+              {isVerifyingSms && <Loader2 size={16} className="animate-spin" />}
+              {isVerifyingSms ? "در حال بررسی..." : "تأیید و ورود"}
+            </button>
+            <button
+              type="button"
+              onClick={() => requestSmsCode()}
+              disabled={smsCooldown > 0 || isSendingSms}
+              className="self-center flex items-center gap-1.5 text-xs font-bold text-brand-blue hover:text-white disabled:text-brand-surface_m disabled:cursor-not-allowed transition-colors"
+            >
+              {isSendingSms && <Loader2 size={12} className="animate-spin" />}
+              {smsCooldown > 0 ? `ارسال مجدد کد تا ${smsCooldown} ثانیه دیگر` : "ارسال مجدد کد"}
+            </button>
+          </form>
+        )}
+
+        <button
+          type="button"
+          onClick={switchToTotp}
+          className="self-center flex items-center gap-1.5 text-xs font-bold text-brand-m_khonsa hover:text-white transition-colors"
+        >
+          <KeyRound size={13} />
+          بازگشت به ورود با Authenticator
         </button>
       </div>
     );
@@ -175,6 +375,17 @@ export default function AdminTotpGate({
         {isVerifying && <Loader2 size={16} className="animate-spin" />}
         {isVerifying ? "در حال بررسی..." : "تأیید"}
       </button>
+
+      {!requiresSetup && (
+        <button
+          type="button"
+          onClick={switchToSms}
+          className="self-center flex items-center gap-1.5 text-xs font-bold text-brand-m_khonsa hover:text-white transition-colors"
+        >
+          <MessageSquareText size={13} />
+          مشکلی با Authenticator داری؟ با پیامک وارد شو
+        </button>
+      )}
     </form>
   );
 }
