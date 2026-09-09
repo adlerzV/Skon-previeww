@@ -4,7 +4,6 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
 
@@ -13,13 +12,13 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       {
-        protocol: 'http',
-        hostname: 'arena2battle.ir',
+        protocol: 'https',
+        hostname: 'api.arena2battle.com',
         pathname: '/**',
       },
       {
-        protocol: 'http',
-        hostname: 'arena2battle.ir',
+        protocol: 'https',
+        hostname: 'arena2battle.com',
         pathname: '/**',
       },
     ],
