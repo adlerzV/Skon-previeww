@@ -1,8 +1,9 @@
 import "server-only";
 
 const WP_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL;
+const INTERNAL_WP_GRAPHQL_URL = process.env.INTERNAL_WORDPRESS_API_URL;
 const FALLBACK_LOCAL_URL = "http://tazavesh.local/graphql";
-const REQUEST_TIMEOUT_MS = 10_000;
+const REQUEST_TIMEOUT_MS = Number(process.env.GRAPHQL_REQUEST_TIMEOUT_MS) || 12_000;
 const MAX_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 400;
 
@@ -10,6 +11,23 @@ if (!WP_GRAPHQL_URL && process.env.NODE_ENV === "production") {
   console.error(
     "[graphql/client] NEXT_PUBLIC_WORDPRESS_API_URL تنظیم نشده؛ درخواست‌های GraphQL fail خواهند شد."
   );
+}
+
+function resolveEndpoint(): { url: string; hostHeader?: string } {
+  const publicUrl = WP_GRAPHQL_URL || FALLBACK_LOCAL_URL;
+
+  if (!INTERNAL_WP_GRAPHQL_URL) {
+    return { url: publicUrl };
+  }
+
+  let hostHeader: string | undefined;
+  try {
+    hostHeader = new URL(publicUrl).host;
+  } catch {
+    hostHeader = undefined;
+  }
+
+  return { url: INTERNAL_WP_GRAPHQL_URL, hostHeader };
 }
 
 export const parsePrice = (priceString?: string | null): number | null => {
@@ -45,6 +63,8 @@ export async function fetchGraphQL(
         : { type: "force-cache" }
       : cacheStrategy;
 
+  const { url: endpointUrl, hostHeader } = resolveEndpoint();
+
   const fetchOptions: RequestInit & {
     next?: { tags?: string[]; revalidate?: number };
   } = {
@@ -52,6 +72,7 @@ export async function fetchGraphQL(
     headers: {
       "Content-Type": "application/json",
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...(hostHeader ? { Host: hostHeader } : {}),
     },
     body: JSON.stringify({ query, variables }),
   };
@@ -78,7 +99,7 @@ export async function fetchGraphQL(
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
-      const res = await fetch(WP_GRAPHQL_URL || FALLBACK_LOCAL_URL, {
+      const res = await fetch(endpointUrl, {
         ...fetchOptions,
         signal: controller.signal,
       });
@@ -97,6 +118,7 @@ export async function fetchGraphQL(
       if (json.errors) {
         console.error("GraphQL Errors:", JSON.stringify(json.errors, null, 2));
         if (!json.data) {
+          console.error("GraphQL query preview:", query.trim().slice(0, 160));
           return null;
         }
       }
@@ -105,7 +127,7 @@ export async function fetchGraphQL(
     } catch (error) {
       const isAbort = (error as Error)?.name === "AbortError";
       if (isAbort) {
-        console.error(`GraphQL request timed out after ${REQUEST_TIMEOUT_MS}ms`);
+        console.error(`GraphQL request timed out after ${REQUEST_TIMEOUT_MS}ms — query preview:`, query.trim().slice(0, 160));
       } else {
         console.error("Fetch GraphQL Network Error:", error);
       }
