@@ -22,11 +22,9 @@ export default function ProfileEditForm({ name, email }: ProfileEditFormProps) {
     setError("");
     setSuccess("");
 
-    const [firstName, ...rest] = nameValue.trim().split(" ");
-    const lastName = rest.join(" ");
-
-    if (!firstName) {
-      setError("نام نمی‌تواند خالی باشد");
+    const trimmedName = nameValue.trim();
+    if (trimmedName.length < 2) {
+      setError("نام نمایشی باید حداقل ۲ کاراکتر باشد");
       return;
     }
 
@@ -35,7 +33,7 @@ export default function ProfileEditForm({ name, email }: ProfileEditFormProps) {
       const res = await fetch("/api/account/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email: emailValue.trim() }),
+        body: JSON.stringify({ displayName: trimmedName, email: emailValue.trim() }),
       });
       const data = await res.json();
 
@@ -44,6 +42,7 @@ export default function ProfileEditForm({ name, email }: ProfileEditFormProps) {
         return;
       }
 
+      setNameValue(data.name ?? trimmedName);
       setSuccess("اطلاعات با موفقیت بروزرسانی شد");
       setIsEditing(false);
       router.refresh();
@@ -84,7 +83,7 @@ export default function ProfileEditForm({ name, email }: ProfileEditFormProps) {
       {isEditing ? (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-brand-m_khonsa">نام و نام خانوادگی</label>
+            <label className="text-xs text-brand-m_khonsa">نام نمایشی</label>
             <input
               type="text"
               value={nameValue}
@@ -125,7 +124,7 @@ export default function ProfileEditForm({ name, email }: ProfileEditFormProps) {
       ) : (
         <div className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between border-b border-brand-surface_hover pb-2">
-            <span className="text-brand-m_khonsa">نام</span>
+            <span className="text-brand-m_khonsa">نام نمایشی</span>
             <span className="text-white font-medium">{name}</span>
           </div>
           <div className="flex justify-between">

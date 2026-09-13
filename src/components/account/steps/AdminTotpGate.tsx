@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Loader2, ShieldCheck, Copy, Check, MessageSquareText, KeyRound } from "lucide-react";
-import Image from "next/image";
+import { QRCodeSVG } from "qrcode.react";
 
 type AuthMethod = "totp" | "sms";
+
+const toEnglishDigits = (value: string): string => {
+  return value
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632))
+    .replace(/[^\d]/g, "");
+};
 
 export default function AdminTotpGate({
   pendingTicket,
@@ -15,6 +22,7 @@ export default function AdminTotpGate({
   requiresSetup: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [method, setMethod] = useState<AuthMethod>("totp");
 
   const [code, setCode] = useState("");
@@ -36,19 +44,40 @@ export default function AdminTotpGate({
   const [isVerifyingSms, setIsVerifyingSms] = useState(false);
   const [smsError, setSmsError] = useState("");
 
+  const goToAccount = useCallback(() => {
+    if (pathname === "/my-account") {
+      router.refresh();
+    } else {
+      router.push("/my-account");
+    }
+  }, [pathname, router]);
+
   useEffect(() => {
     if (!requiresSetup) return;
+
+    const controller = new AbortController();
     fetch("/api/auth/admin-totp/setup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pendingTicket }),
+      signal: controller.signal,
     })
-      .then((res) => res.json())
+      .then((res) => res.json().catch(() => null))
       .then((data) => {
-        if (data?.secret) setSetupData({ secret: data.secret, otpauthUrl: data.otpauthUrl });
-        else setError(data?.error || "خطا در تنظیم تأیید دومرحله‌ای");
+        if (data?.secret) {
+          setSetupData({ secret: data.secret, otpauthUrl: data.otpauthUrl });
+        } else {
+          setError(data?.error || "خطا در تنظیم تأیید دومرحله‌ای");
+        }
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          setError("خطا در ارتباط با سرور");
+        }
       })
       .finally(() => setIsLoadingSetup(false));
+
+    return () => controller.abort();
   }, [requiresSetup, pendingTicket]);
 
   useEffect(() => {
@@ -59,9 +88,13 @@ export default function AdminTotpGate({
 
   const handleCopySecret = async () => {
     if (!setupData) return;
-    await navigator.clipboard.writeText(setupData.secret);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(setupData.secret);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setError("امکان کپی خودکار وجود ندارد، لطفاً دستی کپی کنید.");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,19 +114,19 @@ export default function AdminTotpGate({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pendingTicket, code }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
 
       if (!res.ok) {
         setError(data?.error || "کد وارد شده صحیح نیست");
         return;
       }
 
-      if (requiresSetup && data.recoveryCodes?.length) {
+      if (requiresSetup && data?.recoveryCodes?.length) {
         setRecoveryCodes(data.recoveryCodes);
         return;
       }
 
-      router.refresh();
+      goToAccount();
     } catch {
       setError("خطا در ارتباط با سرور");
     } finally {
@@ -111,23 +144,23 @@ export default function AdminTotpGate({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pendingTicket, phone: phoneOverride }),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
 
         if (!res.ok) {
           setSmsError(data?.error || "ارسال کد با خطا مواجه شد");
           return;
         }
 
-        if (data.requiresPhoneInput) {
+        if (data?.requiresPhoneInput) {
           setSmsRequiresPhoneInput(true);
           setSmsCodeSent(false);
           return;
         }
 
         setSmsRequiresPhoneInput(false);
-        setSmsMaskedPhone(data.maskedPhone ?? null);
+        setSmsMaskedPhone(data?.maskedPhone ?? null);
         setSmsCodeSent(true);
-        setSmsCooldown(data.cooldownSeconds ?? 60);
+        setSmsCooldown(data?.cooldownSeconds ?? 60);
       } catch {
         setSmsError("خطا در ارتباط با سرور");
       } finally {
@@ -145,19 +178,20 @@ export default function AdminTotpGate({
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = smsPhone.trim();
-    if (!/^09\d{9}$/.test(trimmed)) {
+    const cleanPhone = toEnglishDigits(smsPhone.trim());
+    if (!/^09\d{9}$/.test(cleanPhone)) {
       setSmsError("شماره موبایل را به‌درستی وارد کنید (مثلاً ۰۹۱۲۳۴۵۶۷۸۹)");
       return;
     }
-    await requestSmsCode(trimmed);
+    await requestSmsCode(cleanPhone);
   };
 
   const handleSmsVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setSmsError("");
 
-    if (smsCode.trim().length < 5) {
+    const cleanCode = toEnglishDigits(smsCode.trim());
+    if (cleanCode.length < 5) {
       setSmsError("کد تأیید را کامل وارد کنید");
       return;
     }
@@ -167,16 +201,16 @@ export default function AdminTotpGate({
       const res = await fetch("/api/auth/admin-sms/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pendingTicket, code: smsCode.trim() }),
+        body: JSON.stringify({ pendingTicket, code: cleanCode }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
 
       if (!res.ok) {
         setSmsError(data?.error || "کد وارد شده صحیح نیست");
         return;
       }
 
-      router.refresh();
+      goToAccount();
     } catch {
       setSmsError("خطا در ارتباط با سرور");
     } finally {
@@ -209,7 +243,7 @@ export default function AdminTotpGate({
         </div>
         <button
           type="button"
-          onClick={() => router.refresh()}
+          onClick={goToAccount}
           className="bg-brand-blue hover:bg-[#0062d1] text-white font-bold py-3 transition-colors"
         >
           ذخیره کردم، برو به داشبورد
@@ -238,18 +272,19 @@ export default function AdminTotpGate({
         )}
 
         {smsRequiresPhoneInput ? (
-          <form onSubmit={handlePhoneSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handlePhoneSubmit} className="flex flex-col gap-4" noValidate>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-brand-surface_m">شماره موبایل برای ورود پیامکی</label>
               <input
                 type="tel"
                 inputMode="numeric"
                 value={smsPhone}
-                onChange={(e) => setSmsPhone(e.target.value.replace(/[^\d]/g, ""))}
+                onChange={(e) => setSmsPhone(toEnglishDigits(e.target.value))}
                 dir="ltr"
                 placeholder="09123456789"
                 maxLength={11}
-                className="w-full bg-brand-bg border border-brand-surface_hover pr-10 pl-3 py-3 text-sm text-brand-active text-left focus:outline-none focus:border-brand-blue transition-colors"
+                disabled={isSendingSms}
+                className="w-full bg-brand-bg border border-brand-surface_hover pr-10 pl-3 py-3 text-sm text-brand-active text-left focus:outline-none focus:border-brand-blue disabled:opacity-50 transition-colors"
               />
             </div>
             <button
@@ -262,16 +297,17 @@ export default function AdminTotpGate({
             </button>
           </form>
         ) : (
-          <form onSubmit={handleSmsVerify} className="flex flex-col gap-4">
+          <form onSubmit={handleSmsVerify} className="flex flex-col gap-4" noValidate>
             <input
               type="text"
               inputMode="numeric"
               value={smsCode}
-              onChange={(e) => setSmsCode(e.target.value.replace(/[^\d]/g, ""))}
-              maxLength={5}
+              onChange={(e) => setSmsCode(toEnglishDigits(e.target.value))}
+              maxLength={6}
               dir="ltr"
               placeholder="⋅ ⋅ ⋅ ⋅ ⋅"
-              className="w-full bg-brand-bg border border-brand-surface_hover text-center tracking-[0.5em] py-3 text-xl text-brand-active focus:outline-none focus:border-brand-blue transition-colors"
+              disabled={isVerifyingSms}
+              className="w-full bg-brand-bg border border-brand-surface_hover text-center tracking-[0.5em] py-3 text-xl text-brand-active focus:outline-none focus:border-brand-blue disabled:opacity-50 transition-colors"
             />
             <button
               type="submit"
@@ -315,7 +351,7 @@ export default function AdminTotpGate({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <div className="text-center flex flex-col gap-1">
         <ShieldCheck size={24} className="text-brand-blue mx-auto mb-1" />
         <span className="text-sm font-bold text-white">
@@ -330,13 +366,8 @@ export default function AdminTotpGate({
 
       {requiresSetup && setupData && (
         <div className="flex flex-col items-center gap-3 bg-brand-bg border border-brand-surface_hover p-4">
-          <div className="bg-white p-2">
-            <Image
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(setupData.otpauthUrl)}`}
-              alt="QR کد تأیید دومرحله‌ای"
-              width={160}
-              height={160}
-            />
+          <div className="bg-white p-3 rounded">
+            <QRCodeSVG value={setupData.otpauthUrl} size={160} level="M" />
           </div>
           <button
             type="button"
@@ -360,11 +391,12 @@ export default function AdminTotpGate({
         type="text"
         inputMode="numeric"
         value={code}
-        onChange={(e) => setCode(e.target.value.replace(/[^\d]/g, ""))}
+        onChange={(e) => setCode(toEnglishDigits(e.target.value))}
         maxLength={6}
         dir="ltr"
         placeholder="۶ رقمی"
-        className="w-full bg-brand-bg border border-brand-surface_hover text-center tracking-[0.4em] py-3 text-xl text-brand-active focus:outline-none focus:border-brand-blue transition-colors"
+        disabled={isVerifying}
+        className="w-full bg-brand-bg border border-brand-surface_hover text-center tracking-[0.4em] py-3 text-xl text-brand-active focus:outline-none focus:border-brand-blue disabled:opacity-50 transition-colors"
       />
 
       <button

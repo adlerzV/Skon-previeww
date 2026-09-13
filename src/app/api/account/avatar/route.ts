@@ -5,7 +5,7 @@ import { UPDATE_AVATAR_MUTATION } from "@/lib/graphql/auth";
 import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { getCurrentUser } from "@/lib/auth/session";
-import { isValidAvatarPath } from "@/lib/avatars";
+import { isValidAvatarId, resolveAvatarUrl } from "@/lib/avatars";
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
@@ -30,21 +30,23 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const avatarPath = typeof body?.avatarPath === "string" ? body.avatarPath.trim() : "";
+    const avatarId = typeof body?.avatarId === "string" ? body.avatarId.trim() : "";
 
-    const isValid = await isValidAvatarPath(avatarPath, user.isStaff);
+    const isValid = await isValidAvatarId(avatarId, user.isStaff);
     if (!isValid) {
-      return NextResponse.json({ error: "مسیر آواتار نامعتبر است" }, { status: 400 });
+      return NextResponse.json({ error: "آواتار انتخاب‌شده نامعتبر است" }, { status: 400 });
     }
 
-    const data = await fetchGraphQL(UPDATE_AVATAR_MUTATION, { avatarUrl: avatarPath }, [], "no-store", token);
+    const data = await fetchGraphQL(UPDATE_AVATAR_MUTATION, { avatarUrl: avatarId }, [], "no-store", token);
     const result = data?.updateUserAvatar;
 
     if (!result?.success) {
       return NextResponse.json({ error: "بروزرسانی عکس پروفایل با خطا مواجه شد" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, avatarUrl: result.avatarUrl });
+    const resolvedUrl = await resolveAvatarUrl(result.avatarUrl);
+
+    return NextResponse.json({ success: true, avatarId: result.avatarUrl, avatarUrl: resolvedUrl });
   } catch (error) {
     console.error("Update avatar error:", error);
     return NextResponse.json({ error: "خطا در ارتباط با سرور" }, { status: 500 });

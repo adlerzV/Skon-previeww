@@ -1,7 +1,6 @@
 import "server-only";
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { fetchGraphQL } from "@/lib/graphql";
 import { REGISTER_SESSION_MUTATION } from "@/lib/graphql/auth";
 import {
@@ -20,48 +19,71 @@ export async function completeLogin(
   tokens: { authToken: string; refreshToken?: string | null },
   extra: Record<string, unknown> = {}
 ) {
-  const cookieStore = await cookies();
-  const existingSessionId = cookieStore.get(SESSION_ID_COOKIE)?.value;
-  const sessionId = existingSessionId || randomUUID();
+  const sessionId = request.cookies.get(SESSION_ID_COOKIE)?.value || randomUUID();
   const userAgent = request.headers.get("user-agent") || "";
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
     "unknown";
 
-  await fetchGraphQL(
-    REGISTER_SESSION_MUTATION,
-    { sessionId, deviceLabel: detectDeviceLabel(userAgent), ipAddress: ip, userAgent },
-    [],
-    "no-store",
-    tokens.authToken
-  );
+  let isStaff = false;
 
-  const viewerData = await fetchGraphQL(`query { viewer { isStaff } }`, {}, [], "no-store", tokens.authToken);
+  try {
+    const sessionData = await fetchGraphQL(
+      REGISTER_SESSION_MUTATION,
+      { sessionId, deviceLabel: detectDeviceLabel(userAgent), ipAddress: ip, userAgent },
+      [],
+      "no-store",
+      tokens.authToken
+    );
+    isStaff = Boolean(sessionData?.registerSession?.isStaff);
+  } catch {
+    isStaff = false;
+  }
 
   const isProd = process.env.NODE_ENV === "production";
   const response = NextResponse.json({ success: true, ...extra });
 
   response.cookies.set(AUTH_TOKEN_COOKIE, tokens.authToken, {
-    httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: AUTH_TOKEN_MAX_AGE,
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax",
+    path: "/",
+    maxAge: AUTH_TOKEN_MAX_AGE,
   });
 
   if (tokens.refreshToken) {
     response.cookies.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
-      httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: REFRESH_TOKEN_MAX_AGE,
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      path: "/",
+      maxAge: REFRESH_TOKEN_MAX_AGE,
     });
   }
 
   response.cookies.set(LOGGED_IN_COOKIE, "1", {
-    httpOnly: false, secure: isProd, sameSite: "lax", path: "/", maxAge: REFRESH_TOKEN_MAX_AGE,
+    httpOnly: false,
+    secure: isProd,
+    sameSite: "lax",
+    path: "/",
+    maxAge: REFRESH_TOKEN_MAX_AGE,
   });
 
   response.cookies.set(SESSION_ID_COOKIE, sessionId, {
-    httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: REFRESH_TOKEN_MAX_AGE,
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax",
+    path: "/",
+    maxAge: REFRESH_TOKEN_MAX_AGE,
   });
 
-  response.cookies.set(IS_STAFF_COOKIE, viewerData?.viewer?.isStaff ? "1" : "0", {
-    httpOnly: false, secure: isProd, sameSite: "lax", path: "/", maxAge: REFRESH_TOKEN_MAX_AGE,
+  response.cookies.set(IS_STAFF_COOKIE, isStaff ? "1" : "0", {
+    httpOnly: false,
+    secure: isProd,
+    sameSite: "lax",
+    path: "/",
+    maxAge: REFRESH_TOKEN_MAX_AGE,
   });
 
   return response;

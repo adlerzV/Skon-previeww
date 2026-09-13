@@ -19,11 +19,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const firstName = typeof body?.firstName === "string" ? body.firstName.trim().slice(0, 60) : undefined;
-    const lastName = typeof body?.lastName === "string" ? body.lastName.trim().slice(0, 60) : undefined;
+    const displayName = typeof body?.displayName === "string" ? body.displayName.trim().slice(0, 60) : undefined;
     const email = typeof body?.email === "string" ? body.email.trim().slice(0, 120) : undefined;
 
-    const data = await fetchGraphQL(UPDATE_PROFILE_MUTATION, { firstName, lastName, email }, [], "no-store", token);
+    const data = await fetchGraphQL(UPDATE_PROFILE_MUTATION, { displayName, email }, [], "no-store", token);
     const result = data?.updateCustomerProfile;
 
     if (!result?.success) {

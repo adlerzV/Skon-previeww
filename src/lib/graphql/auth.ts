@@ -1,3 +1,4 @@
+// src/lib/graphql/auth.ts
 import "server-only";
 
 export const REPLY_TO_REVIEW_MUTATION = `
@@ -152,8 +153,8 @@ export const UPDATE_AVATAR_MUTATION = `
 `;
 
 export const UPDATE_PROFILE_MUTATION = `
-  mutation UpdateCustomerProfile($firstName: String, $lastName: String, $email: String) {
-    updateCustomerProfile(input: { firstName: $firstName, lastName: $lastName, email: $email }) {
+  mutation UpdateCustomerProfile($displayName: String, $email: String) {
+    updateCustomerProfile(input: { displayName: $displayName, email: $email }) {
       success
       name
       email
@@ -191,6 +192,7 @@ export const REGISTER_SESSION_MUTATION = `
   mutation RegisterSession($sessionId: String!, $deviceLabel: String, $ipAddress: String, $userAgent: String) {
     registerSession(input: { sessionId: $sessionId, deviceLabel: $deviceLabel, ipAddress: $ipAddress, userAgent: $userAgent }) {
       success
+      isStaff
     }
   }
 `;

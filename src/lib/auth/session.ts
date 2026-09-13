@@ -10,6 +10,7 @@ export interface SessionUser {
   databaseId: number;
   name: string;
   email: string;
+  avatarId: string | null;
   avatarUrl: string | null;
   isStaff: boolean;
   hasManualPassword: boolean;
@@ -51,10 +52,12 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
     if (data.viewer.activeSessionValid === false) return null;
 
     const viewer = data.viewer;
-    const avatarUrl = await resolveAvatarUrl(viewer.avatarUrl);
+    const avatarId = viewer.avatarUrl ?? null;
+    const avatarUrl = await resolveAvatarUrl(avatarId);
 
     return {
       ...viewer,
+      avatarId,
       avatarUrl,
       isStaff: Boolean(viewer.isStaff),
       hasManualPassword: Boolean(viewer.hasManualPassword),

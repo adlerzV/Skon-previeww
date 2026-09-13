@@ -7,25 +7,35 @@ import { useRouter } from "next/navigation";
 import UserAvatar from "@/components/ui/UserAvatar";
 import Modal from "@/components/ui/Modal";
 
+interface AvatarOption {
+  id: string;
+  url: string;
+}
+
 interface AvatarPickerProps {
-  currentAvatar?: string | null;
+  currentAvatarId?: string | null;
+  currentAvatarUrl?: string | null;
   name?: string | null;
-  avatars: string[];
-  adminAvatars?: string[];
-  onSuccess?: (newAvatar: string) => void;
+  isStaff?: boolean;
 }
 
 export default function AvatarPicker({
-  currentAvatar,
+  currentAvatarId,
+  currentAvatarUrl,
   name,
-  avatars = [],
-  adminAvatars = [],
-  onSuccess,
+  isStaff = false,
 }: AvatarPickerProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState(currentAvatar ?? "");
-  const [pendingSelection, setPendingSelection] = useState(currentAvatar ?? "");
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isLoadingList, setIsLoadingList] = useState(false);
+  const [avatars, setAvatars] = useState<AvatarOption[]>([]);
+  const [adminAvatars, setAdminAvatars] = useState<AvatarOption[]>([]);
+
+  const [selectedId, setSelectedId] = useState(currentAvatarId ?? "");
+  const [selectedUrl, setSelectedUrl] = useState(currentAvatarUrl ?? "");
+  const [pendingId, setPendingId] = useState(currentAvatarId ?? "");
+
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -34,14 +44,29 @@ export default function AvatarPicker({
     setIsOpen(false);
   };
 
-  const openPicker = () => {
+  const openPicker = async () => {
     setIsOpen(true);
     setMessage("");
-    setPendingSelection(selected);
+    setPendingId(selectedId);
+
+    if (hasLoaded) return;
+
+    setIsLoadingList(true);
+    try {
+      const res = await fetch("/api/avatars", { cache: "no-store" });
+      const data = await res.json();
+      setAvatars(data.avatars ?? []);
+      setAdminAvatars(data.adminAvatars ?? []);
+      setHasLoaded(true);
+    } catch {
+      setMessage("خطا در بارگذاری لیست آواتارها");
+    } finally {
+      setIsLoadingList(false);
+    }
   };
 
   const handleSave = async () => {
-    if (!pendingSelection || pendingSelection === selected) {
+    if (!pendingId || pendingId === selectedId) {
       setIsOpen(false);
       return;
     }
@@ -51,17 +76,16 @@ export default function AvatarPicker({
       const res = await fetch("/api/account/avatar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatarPath: pendingSelection }),
+        body: JSON.stringify({ avatarId: pendingId }),
       });
+      const data = await res.json();
       if (!res.ok) throw new Error();
 
-      setSelected(pendingSelection);
+      setSelectedId(data.avatarId);
+      setSelectedUrl(data.avatarUrl);
       setMessage("عکس پروفایل بروزرسانی شد");
       setIsOpen(false);
-      
-      // به‌روزرسانی دیتا در کلاینت و سرور
-      if (onSuccess) onSuccess(pendingSelection);
-      router.refresh(); 
+      router.refresh();
     } catch {
       setMessage("خطا در ذخیره‌سازی");
     } finally {
@@ -69,15 +93,15 @@ export default function AvatarPicker({
     }
   };
 
-  const renderGrid = (list: string[]) => (
+  const renderGrid = (list: AvatarOption[]) => (
     <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4 md:gap-5">
       {list.map((avatar) => {
-        const isSelected = pendingSelection === avatar;
+        const isSelected = pendingId === avatar.id;
         return (
           <button
-            key={avatar}
+            key={avatar.id}
             type="button"
-            onClick={() => setPendingSelection(avatar)}
+            onClick={() => setPendingId(avatar.id)}
             disabled={isSaving}
             className={`relative w-16 h-16 md:w-20 md:h-20 mx-auto rounded-full overflow-hidden border-2 transition-all duration-150 hover:scale-105 disabled:opacity-50 disabled:pointer-events-none ${
               isSelected
@@ -85,7 +109,7 @@ export default function AvatarPicker({
                 : "border-transparent hover:border-brand-surface_hover"
             }`}
           >
-            <Image src={avatar} alt="avatar" fill className="object-cover" sizes="80px" />
+            <Image src={avatar.url} alt="avatar" fill loading="lazy" className="object-cover" sizes="80px" />
             {isSelected && (
               <span className="absolute inset-0 bg-brand-blue/40 flex items-center justify-center">
                 <Check size={22} className="text-white" />
@@ -99,13 +123,8 @@ export default function AvatarPicker({
 
   return (
     <div className="flex items-center gap-5">
-      <button
-        type="button"
-        onClick={openPicker}
-        className="relative group shrink-0"
-        aria-label="تغییر عکس پروفایل"
-      >
-        <UserAvatar src={selected} name={name} size="xl" ring />
+      <button type="button" onClick={openPicker} className="relative group shrink-0" aria-label="تغییر عکس پروفایل">
+        <UserAvatar src={selectedUrl} name={name} size="xl" ring />
         <span className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <Camera size={22} className="text-white" />
         </span>
@@ -127,15 +146,19 @@ export default function AvatarPicker({
       </div>
 
       <Modal isOpen={isOpen} onClose={closePicker} title="انتخاب عکس پروفایل" size="xl">
-        {avatars.length === 0 && adminAvatars.length === 0 ? (
-          <div className="text-center py-14 text-sm text-brand-m_khonsa">
-            هنوز هیچ آواتاری تعریف نشده است.
+        {isLoadingList ? (
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4 md:gap-5">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="w-16 h-16 md:w-20 md:h-20 mx-auto rounded-full bg-white/5 animate-pulse" />
+            ))}
           </div>
+        ) : avatars.length === 0 && adminAvatars.length === 0 ? (
+          <div className="text-center py-14 text-sm text-brand-m_khonsa">هنوز هیچ آواتاری تعریف نشده است.</div>
         ) : (
           <div className="flex flex-col gap-7">
             {renderGrid(avatars)}
 
-            {adminAvatars.length > 0 && (
+            {isStaff && adminAvatars.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-brand-surface_hover pt-6">
                 <span className="flex items-center gap-1.5 text-xs font-bold text-brand-blue">
                   <ShieldCheck size={14} />
@@ -148,7 +171,7 @@ export default function AvatarPicker({
             <button
               type="button"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !pendingId}
               className="w-full bg-brand-blue hover:bg-[#0062d1] disabled:opacity-60 text-white font-bold py-3 flex items-center justify-center gap-2 transition-colors"
             >
               {isSaving && <Loader2 size={16} className="animate-spin" />}

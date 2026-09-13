@@ -1,17 +1,19 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import DashboardShell from "@/components/account/DashboardShell";
 import MobileBottomNav from "@/components/Header/MobileBottomNav";
+import AccountLayoutSkeleton from "@/components/account/AccountLayoutSkeleton";
 import { getCurrentUser } from "@/lib/auth/session";
 
-export default async function AccountLayout({ children }: { children: React.ReactNode }) {
+async function AccountLayoutContent({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
 
   if (!user) {
     return (
       <div className="min-h-screen w-full bg-brand-bg flex flex-col" dir="rtl">
-        <div className="w-full flex items-center justify-between px-5 py-4 md:px-8">
+        <header className="w-full flex items-center justify-between px-5 py-4 md:px-8">
           <Link href="/" aria-label="صفحه اصلی">
             <Image
               src="/images/arena2battleLogo.webp"
@@ -30,11 +32,11 @@ export default async function AccountLayout({ children }: { children: React.Reac
             <ChevronRight size={14} />
             بازگشت به فروشگاه
           </Link>
-        </div>
+        </header>
 
-        <div className="flex-1 w-full flex items-center justify-center p-5 pb-[calc(58px+env(safe-area-inset-bottom)+20px)] lg:pb-5">
+        <main className="flex-1 w-full flex items-center justify-center p-5 pb-[calc(58px+env(safe-area-inset-bottom)+20px)] lg:pb-5">
           {children}
-        </div>
+        </main>
 
         <MobileBottomNav user={null} />
       </div>
@@ -45,5 +47,13 @@ export default async function AccountLayout({ children }: { children: React.Reac
     <DashboardShell user={{ avatarUrl: user.avatarUrl, name: user.name, isStaff: user.isStaff }}>
       {children}
     </DashboardShell>
+  );
+}
+
+export default function AccountLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<AccountLayoutSkeleton />}>
+      <AccountLayoutContent>{children}</AccountLayoutContent>
+    </Suspense>
   );
 }

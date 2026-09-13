@@ -14,23 +14,29 @@
     "@upstash/redis": "^1.34.3",
     "isomorphic-dompurify": "^3.18.0",
     "lucide-react": "^1.20.0",
-    "next": "^16.2.6",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "next": "^16.3.4",
+    "qrcode.react": "^4.1.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "sharp": "^0.35.3",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "^16.2.11",
+    "@next/bundle-analyzer": "^16.3.4",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "dotenv": "^17.4.2",
     "eslint": "^10.7.0",
-    "eslint-config-next": "^16.2.11",
+    "eslint-config-next": "^16.3.4",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "overrides": {
+    "qrcode.react": {
+      "react": "$react"
+    }
   }
 }
