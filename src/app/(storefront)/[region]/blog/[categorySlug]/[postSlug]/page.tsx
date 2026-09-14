@@ -7,13 +7,12 @@ import {
   getProducts,
   fetchGraphQL,
 } from "@/lib/graphql";
-import { POST_COMMENTS_QUERY, GET_MY_RATING_QUERY } from "@/lib/graphql/blog";
-import { resolveAvatarUrl } from "@/lib/avatars";
+import { GET_MY_RATING_QUERY } from "@/lib/graphql/blog";
 import { getCurrentUser, getAuthToken } from "@/lib/auth/session";
 import SocialShare from "@/components/blog/SocialShare";
 import BlogSidebarInfo from "@/components/blog/BlogSidebarInfo";
 import RelatedNewsPanel from "@/components/blog/RelatedNewsPanel";
-import CommentThread from "@/components/comments/CommentThread";
+import PostCommentsSection from "@/components/blog/PostCommentsSection";
 
 interface PostPageProps {
   params: Promise<{ region: string; categorySlug: string; postSlug: string }>;
@@ -28,9 +27,11 @@ export default async function BlogPostPage({ params }: PostPageProps) {
   const mainCategory = category?.parent?.node ?? category;
   const canonicalSlug = mainCategory?.slug ?? "uncategorized";
 
-  const [user, token, relatedPosts, relatedProducts, commentsData] = await Promise.all([
+  const tokenPromise = getAuthToken();
+
+  const [user, token, relatedPosts, relatedProducts, ratingData] = await Promise.all([
     getCurrentUser().catch(() => null),
-    getAuthToken(),
+    tokenPromise,
     category
       ? getRelatedPosts({
           categoryId: category.databaseId,
@@ -41,25 +42,15 @@ export default async function BlogPostPage({ params }: PostPageProps) {
         })
       : Promise.resolve([]),
     mainCategory ? getProducts(mainCategory.slug, region).then((p) => p.slice(0, 5)) : Promise.resolve([]),
-    fetchGraphQL(POST_COMMENTS_QUERY, { id: String(post.databaseId) }, [], "no-store"),
+    tokenPromise.then((t) =>
+      t ? fetchGraphQL(GET_MY_RATING_QUERY, { id: String(post.databaseId) }, [], "no-store", t) : null
+    ),
   ]);
 
-  let initialMyRating: number | null = null;
-  if (token) {
-    const ratingData = await fetchGraphQL(GET_MY_RATING_QUERY, { id: String(post.databaseId) }, [], "no-store", token);
-    initialMyRating = ratingData?.post?.myRating ?? null;
-  }
+  const initialMyRating: number | null = ratingData?.post?.myRating ?? null;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
   const canonicalUrl = `${siteUrl}/${region}/blog/${canonicalSlug}/${post.slug}`;
-
-  const rawComments = commentsData?.post?.comments?.nodes ?? [];
-  const initialComments = await Promise.all(
-    rawComments.map(async (c: any) => ({
-      ...c,
-      author: { node: { ...c.author?.node, avatarUrl: await resolveAvatarUrl(c.author?.node?.avatarUrl) } },
-    }))
-  );
 
   const postTags = post.tags?.nodes ?? [];
 
@@ -125,14 +116,11 @@ export default async function BlogPostPage({ params }: PostPageProps) {
       </div>
 
       <div className="mt-10 md:mt-14 border-t border-brand-surface_hover pt-8 md:pt-10">
-        <CommentThread
-          targetId={post.databaseId}
-          initialComments={initialComments}
+        <PostCommentsSection
+          postId={post.databaseId}
           initialCommentsCount={post.commentsCount ?? 0}
           isLoggedIn={Boolean(user)}
           isStaff={Boolean(user?.isStaff)}
-          writeEndpoint="/api/blog/comments"
-          replyEndpoint="/api/blog/comments/reply"
         />
       </div>
     </main>

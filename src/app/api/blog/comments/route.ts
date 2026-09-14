@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { fetchGraphQL } from "@/lib/graphql";
-import { POST_COMMENTS_QUERY, WRITE_BLOG_COMMENT_MUTATION } from "@/lib/graphql/blog";
-import { resolveAvatarUrl } from "@/lib/avatars";
+import { WRITE_BLOG_COMMENT_MUTATION } from "@/lib/graphql/blog";
+import { getPostComments } from "@/lib/graphql/blogComments";
 import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
@@ -17,26 +17,8 @@ export async function GET(request: NextRequest) {
 
   if (!postId) return NextResponse.json({ error: "شناسه پست نامعتبر است" }, { status: 400 });
 
-  const data = await fetchGraphQL(POST_COMMENTS_QUERY, { id: postId, after }, [], "no-store");
-  const connection = data?.post?.comments;
-  const rawNodes = connection?.nodes ?? [];
-
-  const nodes = await Promise.all(
-    rawNodes.map(async (c: any) => ({
-      ...c,
-      author: {
-        node: {
-          ...c.author?.node,
-          avatarUrl: await resolveAvatarUrl(c.author?.node?.avatarUrl),
-        },
-      },
-    }))
-  );
-
-  return NextResponse.json({
-    comments: nodes,
-    pageInfo: connection?.pageInfo ?? { hasNextPage: false, endCursor: null },
-  });
+  const { comments, pageInfo } = await getPostComments(postId, after);
+  return NextResponse.json({ comments, pageInfo });
 }
 
 export async function POST(request: NextRequest) {

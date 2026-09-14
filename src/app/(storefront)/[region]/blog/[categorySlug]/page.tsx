@@ -29,23 +29,20 @@ export default async function BlogCategoryPage({ params }: BlogCategoryPageProps
     ? [mainCategory.slug, ...subCategories.map((s: any) => s.slug)]
     : [category.slug];
 
-  const [{ posts, pageInfo }, user, token] = await Promise.all([
+  const tokenPromise = getAuthToken();
+
+  const [{ posts, pageInfo }, user, token, followData] = await Promise.all([
     getAllBlogPosts({ categoryIds: catIds, categorySlugsForTags: catSlugsForTags }),
     getCurrentUser().catch(() => null),
-    getAuthToken(),
+    tokenPromise,
+    tokenPromise.then((t) =>
+      t
+        ? fetchGraphQL(GET_FOLLOW_STATUS_QUERY, { id: String(mainCategory.databaseId) }, [], "no-store", t)
+        : null
+    ),
   ]);
 
-  let isFollowing = false;
-  if (token) {
-    const followData = await fetchGraphQL(
-      GET_FOLLOW_STATUS_QUERY,
-      { id: String(mainCategory.databaseId) },
-      [],
-      "no-store",
-      token
-    );
-    isFollowing = Boolean(followData?.category?.isFollowedByViewer);
-  }
+  const isFollowing = Boolean(followData?.category?.isFollowedByViewer);
 
   return (
     <main className="container mx-auto px-4 md:px-6 py-8 md:py-12 text-white max-w-site">
