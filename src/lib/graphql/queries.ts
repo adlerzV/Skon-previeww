@@ -2,7 +2,6 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { fetchGraphQL } from "./client";
 import { formatProducts, sanitizeHtml } from "./utils";
-import { resolveAvatarUrl } from "@/lib/avatars";
 import { extractTocAndInjectIds } from "@/lib/blogToc";
 import { HeaderCategoryNode, HeroTabItem, ProductNode } from "./types";
 import {
@@ -454,25 +453,6 @@ export async function getProductDetail(slug: string, activeRegion: string = "eu"
               attributes { nodes { name options } }
               averageRating
               reviewCount
-              reviews(first: 20) {
-                pageInfo { hasNextPage endCursor }
-                nodes {
-                  id
-                  databaseId
-                  parentDatabaseId
-                  isStaffReply
-                  content
-                  date
-                  author {
-                    node {
-                      name
-                      ... on User {
-                        avatarUrl
-                      }
-                    }
-                  }
-                }
-              }
             }
           }
         `,
@@ -489,26 +469,6 @@ export async function getProductDetail(slug: string, activeRegion: string = "eu"
       const formatted = formatProducts([data.product], false, activeRegion);
       const product = formatted[0] ?? null;
       if (!product) return null;
-
-      if (product.reviews?.nodes && Array.isArray(product.reviews.nodes)) {
-        product.reviews.nodes = await Promise.all(
-          product.reviews.nodes.map(async (r: any) => {
-            const authorNode = r.author?.node;
-            const originalAvatar = authorNode?.avatarUrl || null;
-
-            return {
-              ...r,
-              author: {
-                ...r.author,
-                node: {
-                  ...authorNode,
-                  avatarUrl: await resolveAvatarUrl(originalAvatar),
-                },
-              },
-            };
-          })
-        );
-      }
 
       return product;
     },

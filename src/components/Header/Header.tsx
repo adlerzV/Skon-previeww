@@ -1,20 +1,21 @@
-// src/components/Header/Header.tsx
 import Link from "next/link";
 import Image from "next/image";
-import UserActions from "./UserActions";
-import DesktopNavLinks from "./DesktopNavLinks";
-import MobileMenu from "./MobileMenu";
-import MobileBottomNav from "./MobileBottomNav";
-import HeaderSearch from "./HeaderSearch";
-import HeaderMenuSwitcher from "./HeaderMenuSwitcher";
-import HeaderCart from "./HeaderCart";
-import RegionSwitcher from "./RegionSwitcher";
-import { Download, HelpCircle } from "lucide-react";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
-import { getHeaderCategories, getHeaderBlogCategories, getRegions, getWishlistProductIds } from "@/lib/graphql";
-import { getCurrentUser, getAuthToken } from "@/lib/auth/session";
+import DesktopNavLinks from "./DesktopNavLinks";
+import HeaderSearch from "./HeaderSearch";
+import HeaderCart from "./HeaderCart";
+import HeaderMenuSwitcherAsync from "./HeaderMenuSwitcherAsync";
+import RegionSwitcherAsync from "./RegionSwitcherAsync";
+import UserActionsAsync from "./UserActionsAsync";
+import UserActionsSkeleton from "./UserActionsSkeleton";
+import GamesNavSkeleton from "./GamesNavSkeleton";
+import MobileMenuAsync from "./MobileMenuAsync";
+import MobileMenuBarSkeleton from "./MobileMenuBarSkeleton";
+import MobileBottomNavAsync from "./MobileBottomNavAsync";
+import MobileBottomNav from "./MobileBottomNav";
 import Skeleton from "@/components/ui/Skeleton";
+import { Download, HelpCircle } from "lucide-react";
 
 const ACTION_BUTTON_CLASSES =
   "flex items-center gap-2.5 px-3 py-4 cursor-pointer text-brand-m_khonsa text-[14px] font-semibold transition-colors duration-150 hover:bg-brand-surface hover:text-white";
@@ -24,16 +25,6 @@ const ICON_WRAPPER_CLASSES =
 export default async function Header() {
   const cookieStore = await cookies();
   const activeRegion = cookieStore.get("store_region")?.value || "eu";
-
-  const [shopGames, blogCats, regions, user, wishlistIds] = await Promise.all([
-    getHeaderCategories(),
-    getHeaderBlogCategories(),
-    getRegions().catch(() => []),
-    getCurrentUser().catch(() => null),
-    getAuthToken().then((token) => (token ? getWishlistProductIds(token) : [])).catch(() => []),
-  ]);
-
-  const headerUser = user ? { name: user.name, avatarUrl: user.avatarUrl } : null;
 
   return (
     <>
@@ -69,10 +60,9 @@ export default async function Header() {
               <span>پشتیبانی</span>
             </Link>
 
-            <UserActions
-              user={user ? { name: user.name, avatarUrl: user.avatarUrl, isStaff: user.isStaff } : null}
-              wishlistCount={wishlistIds.length}
-            />
+            <Suspense fallback={<UserActionsSkeleton />}>
+              <UserActionsAsync />
+            </Suspense>
           </div>
         </div>
 
@@ -80,31 +70,31 @@ export default async function Header() {
           <div className="flex w-full container mx-auto px-6 max-w-[1600px] py-[10px] gap-[8px] h-[80px]">
             <div className="flex items-center justify-between flex-1 bg-brand-surface h-full pl-2 rounded-[5px]">
               <HeaderCart />
-              <HeaderMenuSwitcher shopItems={shopGames} blogItems={blogCats} />
+              <Suspense fallback={<GamesNavSkeleton />}>
+                <HeaderMenuSwitcherAsync />
+              </Suspense>
             </div>
 
             <HeaderSearch />
 
             <div className="flex items-center justify-center h-full">
               <Suspense fallback={<Skeleton className="w-[140px] h-[60px] rounded-[4px]" />}>
-                <RegionSwitcher regions={regions} initialRegion={activeRegion} />
+                <RegionSwitcherAsync initialRegion={activeRegion} />
               </Suspense>
             </div>
           </div>
         </div>
 
         <div className="lg:hidden flex items-center justify-between h-[60px] px-4 bg-brand-bg border-b border-white/5">
-          <MobileMenu
-            shopItems={shopGames}
-            blogItems={blogCats}
-            user={headerUser}
-            regions={regions}
-            activeRegion={activeRegion}
-          />
+          <Suspense fallback={<MobileMenuBarSkeleton />}>
+            <MobileMenuAsync activeRegion={activeRegion} />
+          </Suspense>
         </div>
       </header>
 
-      <MobileBottomNav user={headerUser} />
+      <Suspense fallback={<MobileBottomNav user={null} />}>
+        <MobileBottomNavAsync />
+      </Suspense>
     </>
   );
 }
