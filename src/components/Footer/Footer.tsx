@@ -29,64 +29,65 @@ export default async function Footer() {
 
   return (
     <footer className="w-full bg-brand-menu border-t border-brand-surface_hover mt-16" dir="rtl">
-      <div className="container mx-auto px-6 max-w-site py-10 md:py-12 flex flex-col gap-8 md:gap-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-10">
-          <div className="sm:col-span-2 md:col-span-1 flex flex-col gap-3">
+      <div className="container mx-auto px-6 max-w-site py-10 md:py-14 flex flex-col gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-start">
+          <div className="lg:col-span-5 flex flex-col items-start gap-4">
             <Image
               src="/images/arena2battleLogo.webp"
               alt="Arena2Battle"
-              width={110}
-              height={40}
+              width={140}
+              height={45}
               style={{ width: "auto" }}
-              className="h-9 w-auto object-contain"
+              className="h-10 w-auto object-contain"
             />
-            <p className="text-xs text-brand-m_khonsa leading-relaxed max-w-sm md:max-w-[220px]">
+            <p className="text-xs text-brand-m_khonsa leading-relaxed max-w-sm">
               فروشگاه تخصصی بازی، گیفت‌کارت و خدمات درون‌برنامه‌ای گیمینگ با تحویل آنی و امن.
             </p>
+            <Link
+              href="https://wowtokenprice.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center justify-center gap-2.5 bg-brand-surface hover:bg-brand-surface_hover border border-brand-surface_hover hover:border-brand-blue/50 text-white text-xs font-bold px-6 py-3 transition-colors"
+            >
+              <TrendingUp size={15} className="text-brand-sabz shrink-0" />
+              مشاهده آخرین قیمت توکن
+            </Link>
           </div>
 
-          <FooterColumn title="دسترسی سریع" links={QUICK_LINKS} />
-          <FooterColumn title="حساب کاربری" links={ACCOUNT_LINKS} />
+          <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8 w-full">
+            <FooterColumn title="دسترسی سریع" links={QUICK_LINKS} />
+            <FooterColumn title="حساب کاربری" links={ACCOUNT_LINKS} />
 
-          <div className="sm:col-span-2 md:col-span-1 flex flex-col gap-3">
-            <span className="text-sm font-bold text-white">راه‌های ارتباطی</span>
-            <div className="flex flex-col gap-2.5">
-              {SOCIAL_LINKS.map((s) => (
-                <Link
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-xs text-brand-m_khonsa hover:text-white transition-colors w-fit"
-                >
-                  <s.icon size={14} />
-                  {s.label}
-                </Link>
-              ))}
+            <div className="col-span-2 sm:col-span-1 flex flex-col gap-3">
+              <span className="text-sm font-bold text-white">راه‌های ارتباطی</span>
+              <div className="flex flex-col gap-2.5">
+                {SOCIAL_LINKS.map((s) => (
+                  <Link
+                    key={s.label}
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-xs text-brand-m_khonsa hover:text-white transition-colors w-fit"
+                  >
+                    <s.icon size={14} />
+                    {s.label}
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        <Link
-          href="https://wowtokenprice.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full sm:w-auto sm:self-start inline-flex items-center justify-center gap-2.5 sm:min-w-[240px] bg-brand-surface hover:bg-brand-surface_hover border border-brand-surface_hover hover:border-brand-blue/50 text-white text-sm font-bold px-9 py-3.5 transition-colors"
-        >
-          <TrendingUp size={16} className="text-brand-sabz shrink-0" />
-          مشاهده آخرین قیمت توکن
-        </Link>
-
-        <div className="border-t border-brand-surface_hover pt-6 flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:text-right">
-          <span className="text-[11px] text-brand-m_khonsa order-2 sm:order-1">
-            © {new Date().getFullYear()} Arena2Battle — تمامی حقوق محفوظ است.
+        <div className="border-t border-brand-surface_hover pt-6 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 text-center sm:text-right">
+          <span className="text-[11px] text-brand-m_khonsa">
+            © {new Date().getFullYear()} <bdi>Arena2Battle</bdi> — تمامی حقوق محفوظ است.
           </span>
 
           <Link
             href="https://adlerzy.github.io/campfire"
             target="_blank"
             rel="noopener noreferrer"
-            className="order-1 sm:order-2 group flex flex-wrap items-center justify-center gap-2 text-[13px]"
+            className="group flex flex-wrap items-center justify-center sm:justify-end gap-2 text-[13px]"
           >
             <span className="text-brand-m_khonsa">ساخته‌شده با </span>
             <span className="font-black tracking-wide bg-gradient-to-l from-brand-blue via-brand-zard to-brand-sabz bg-clip-text text-transparent group-hover:tracking-widest transition-all duration-300">

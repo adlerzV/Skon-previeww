@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { VariationCard } from "@/lib/graphql";
 import { useCart } from "@/context/CartContext";
 import { User, Gift, FileCheck, Eye, EyeOff, ClipboardPaste } from "lucide-react";
@@ -224,17 +224,14 @@ export default function DeliveryAndPrice({
   const { addToCart, isCartFull } = useCart();
   const { showToast } = useToast();
 
-  const [isMounted, setIsMounted] = useState(false);
-  const [deliveryType, setDeliveryType] = useState<DeliveryType | null>(null);
+  const [deliveryType, setDeliveryType] = useState<DeliveryType | null>(() =>
+    selectedVariation ? getDefaultDelivery(selectedVariation) : null
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [battleTag, setBattleTag] = useState("");
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [burstKey, setBurstKey] = useState(0);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!selectedVariation) {
@@ -246,10 +243,6 @@ export default function DeliveryAndPrice({
     setPassword("");
     setBattleTag("");
   }, [selectedVariation]);
-
-  if (!isMounted) {
-    return <div className="h-48 bg-brand-surface animate-pulse" />;
-  }
 
   if (!selectedVariation) {
     return (

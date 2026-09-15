@@ -3,12 +3,13 @@ import { getAuthToken, getCurrentUser } from "@/lib/auth/session";
 import WishlistButton from "./WishlistButton";
 
 export default async function WishlistButtonAsync({ productId }: { productId: number }) {
-  const [user, token] = await Promise.all([
-    getCurrentUser().catch(() => null),
-    getAuthToken(),
-  ]);
+  const userPromise = getCurrentUser().catch(() => null);
+  const token = await getAuthToken();
+  const wishlistPromise = token
+    ? getWishlistProductIds(token).catch(() => [])
+    : Promise.resolve<number[]>([]);
 
-  const wishlistIds = token ? await getWishlistProductIds(token).catch(() => []) : [];
+  const [user, wishlistIds] = await Promise.all([userPromise, wishlistPromise]);
 
   return (
     <WishlistButton
