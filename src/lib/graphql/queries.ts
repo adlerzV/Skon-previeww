@@ -1,4 +1,5 @@
 import "server-only";
+import crypto from "node:crypto";
 import { unstable_cache } from "next/cache";
 import { fetchGraphQL } from "./client";
 import { formatProducts, sanitizeHtml } from "./utils";
@@ -33,6 +34,25 @@ function safeHeroTabUrls(tabs: HeroTabItem[]): HeroTabItem[] {
     ...t,
     imageUrl: t.imageUrl ? encodeURI(t.imageUrl) : "",
   }));
+}
+
+function buildSlugTag(prefix: string, slug: string): string {
+  let normalized = slug;
+  try {
+    normalized = decodeURIComponent(slug);
+  } catch {
+    normalized = slug;
+  }
+
+  const asciiPart = normalized
+    .replace(/[^a-zA-Z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+
+  const hash = crypto.createHash("sha1").update(normalized).digest("hex").slice(0, 16);
+
+  return asciiPart ? `${prefix}-${asciiPart}-${hash}` : `${prefix}-${hash}`;
 }
 
 export async function getHeaderCategories() {
@@ -121,6 +141,9 @@ export async function getProductsByIds(ids: number[], activeRegion: string = "eu
 export async function getCategoryArchive(slug: string, activeRegion: string = "eu") {
   if (!slug) return null;
 
+  const categoryTag = buildSlugTag("category", slug);
+  const bannersTag = buildSlugTag("banners", slug);
+
   const cached = unstable_cache(
     async () => {
       const [categoryData, bannersData] = await Promise.all([
@@ -141,7 +164,7 @@ export async function getCategoryArchive(slug: string, activeRegion: string = "e
             }
           `,
           { id: slug, categoryIn: [slug], regionSlug: activeRegion },
-          ["products", `category-${slug}`]
+          ["products", categoryTag]
         ),
         fetchGraphQL(
           `
@@ -153,7 +176,7 @@ export async function getCategoryArchive(slug: string, activeRegion: string = "e
             }
           `,
           { id: slug },
-          ["banners", `banners-${slug}`]
+          ["banners", bannersTag]
         ),
       ]);
 
@@ -174,7 +197,7 @@ export async function getCategoryArchive(slug: string, activeRegion: string = "e
       };
     },
     ["category-archive", slug, activeRegion],
-    { tags: ["products", `category-${slug}`, "banners", `banners-${slug}`], revalidate: false }
+    { tags: ["products", categoryTag, "banners", bannersTag], revalidate: false }
   );
 
   return cached();

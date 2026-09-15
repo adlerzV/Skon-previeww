@@ -16,6 +16,11 @@ export interface SessionUser {
   hasManualPassword: boolean;
 }
 
+export interface HeaderViewerData {
+  user: { name: string; avatarUrl: string | null; isStaff: boolean } | null;
+  wishlistIds: number[];
+}
+
 const VIEWER_QUERY = `
   query GetViewer($sessionId: String) {
     viewer {
@@ -27,6 +32,19 @@ const VIEWER_QUERY = `
       isStaff
       hasManualPassword
       activeSessionValid(sessionId: $sessionId)
+    }
+  }
+`;
+
+const VIEWER_WITH_WISHLIST_QUERY = `
+  query GetHeaderViewer($sessionId: String) {
+    viewer {
+      id
+      name
+      avatarUrl
+      isStaff
+      activeSessionValid(sessionId: $sessionId)
+      wishlistIds
     }
   }
 `;
@@ -64,5 +82,35 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
     } as SessionUser;
   } catch {
     return null;
+  }
+});
+
+export const getHeaderViewerData = cache(async (): Promise<HeaderViewerData> => {
+  const token = await getAuthToken();
+  if (!token) return { user: null, wishlistIds: [] };
+
+  try {
+    const sessionId = await getSessionId();
+    const data = await fetchGraphQL(VIEWER_WITH_WISHLIST_QUERY, { sessionId }, [], "no-store", token);
+    const viewer = data?.viewer;
+
+    if (!viewer?.id) return { user: null, wishlistIds: [] };
+
+    const wishlistIds = Array.isArray(viewer.wishlistIds)
+      ? viewer.wishlistIds.filter((id: unknown) => typeof id === "number")
+      : [];
+
+    if (viewer.activeSessionValid === false) {
+      return { user: null, wishlistIds };
+    }
+
+    const avatarUrl = await resolveAvatarUrl(viewer.avatarUrl ?? null);
+
+    return {
+      user: { name: viewer.name, avatarUrl, isStaff: Boolean(viewer.isStaff) },
+      wishlistIds,
+    };
+  } catch {
+    return { user: null, wishlistIds: [] };
   }
 });

@@ -1,19 +1,8 @@
-import { getCurrentUser, getAuthToken } from "@/lib/auth/session";
-import { getWishlistProductIds } from "@/lib/graphql";
+import { getHeaderViewerData } from "@/lib/auth/session";
 import UserActions from "./UserActions";
 
 export default async function UserActionsAsync() {
-  const [user, wishlistIds] = await Promise.all([
-    getCurrentUser().catch(() => null),
-    getAuthToken()
-      .then((token) => (token ? getWishlistProductIds(token) : []))
-      .catch(() => []),
-  ]);
+  const { user, wishlistIds } = await getHeaderViewerData().catch(() => ({ user: null, wishlistIds: [] }));
 
-  return (
-    <UserActions
-      user={user ? { name: user.name, avatarUrl: user.avatarUrl, isStaff: user.isStaff } : null}
-      wishlistCount={wishlistIds.length}
-    />
-  );
+  return <UserActions user={user} wishlistCount={wishlistIds.length} />;
 }
