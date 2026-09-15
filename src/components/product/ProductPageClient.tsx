@@ -411,9 +411,8 @@ export default function ProductPageClient({
     <div className="flex flex-col gap-12 w-full min-h-screen" dir="rtl">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 w-full items-start">
         
-        {/* ستون راست: انتخاب ادیشن و خرید با اسکرول مستقل و لبه محو */}
         <div className="lg:col-span-4 lg:sticky lg:top-6 lg:self-start flex flex-col w-full relative">
-          <div className="flex flex-col gap-6 w-full lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 lg:pl-2 scrollbar-thin scrollbar-thumb-brand-surface_hover scrollbar-track-transparent">
+          <div className="flex flex-col gap-6 w-full">
             <div>
               <div className="flex items-center gap-2.5">
                 {categoryImageUrl && (

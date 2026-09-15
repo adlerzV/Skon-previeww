@@ -14,7 +14,7 @@ import MobileMenuAsync from "./MobileMenuAsync";
 import MobileBottomNavAsync from "./MobileBottomNavAsync";
 import MobileBottomNav from "./MobileBottomNav";
 import Skeleton from "@/components/ui/Skeleton";
-import { Download, HelpCircle } from "lucide-react";
+import { Download, HelpCircle, AlertCircle } from "lucide-react";
 
 const ACTION_BUTTON_CLASSES =
   "flex items-center gap-2.5 px-3 py-4 cursor-pointer text-brand-m_khonsa text-[14px] font-semibold transition-colors duration-150 hover:bg-brand-surface hover:text-white";
@@ -27,8 +27,8 @@ export default async function Header() {
 
   return (
     <>
-      <header className="w-full sticky top-0 lg:top-[-60px] z-[10000] bg-[#15171e]" dir="rtl">
-        <div className="hidden lg:flex w-full justify-between items-center h-[60px] px-6 max-w-[1600px] mx-auto">
+      <header className="w-full sticky top-0 lg:top-[-60px] z-[10000] bg-brand-bg" dir="rtl">
+        <div className="hidden lg:flex relative w-full justify-between items-center h-[60px] px-6 max-w-[1600px] mx-auto">
           <div className="flex items-center h-full gap-8">
             <Link href={`/${activeRegion}`} className="flex items-center shrink-0" aria-label="صفحه اصلی">
               <Image
@@ -42,6 +42,10 @@ export default async function Header() {
               />
             </Link>
             <DesktopNavLinks activeRegion={activeRegion} />
+          </div>
+
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+            <MaintenanceNotice />
           </div>
 
           <div className="flex items-center">
@@ -84,8 +88,11 @@ export default async function Header() {
           </div>
         </div>
 
-        <div className="lg:hidden flex items-center justify-between h-[60px] px-4 bg-brand-bg border-b border-white/5">
+        <div className="lg:hidden relative flex items-center justify-between h-[60px] px-4 bg-brand-bg border-b border-white/5">
           <MobileMenuAsync activeRegion={activeRegion} />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <MaintenanceNotice />
+          </div>
         </div>
       </header>
 
@@ -93,5 +100,27 @@ export default async function Header() {
         <MobileBottomNavAsync />
       </Suspense>
     </>
+  );
+}
+
+function MaintenanceNotice() {
+  return (
+    <div className="relative group flex items-center justify-center">
+      <button
+        type="button"
+        aria-label="اطلاعیه"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-surface hover:bg-brand-surface_hover border border-brand-surface_hover hover:border-brand-zard text-brand-zard transition-colors cursor-pointer"
+      >
+        <AlertCircle size={18} />
+      </button>
+
+      <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[10001] w-64 pointer-events-none group-hover:pointer-events-auto">
+        <div className="bg-brand-surface border border-brand-surface_hover rounded-[5px] p-3 shadow-lg text-right">
+          <p className="text-xs text-white leading-relaxed">
+            درحال افزودن محصولات و اعمال تغییرات هستیم؛ خرید درحال حاضر بسته می‌باشد.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
