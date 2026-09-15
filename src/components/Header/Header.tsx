@@ -11,7 +11,6 @@ import UserActionsAsync from "./UserActionsAsync";
 import UserActionsSkeleton from "./UserActionsSkeleton";
 import GamesNavSkeleton from "./GamesNavSkeleton";
 import MobileMenuAsync from "./MobileMenuAsync";
-import MobileMenuBarSkeleton from "./MobileMenuBarSkeleton";
 import MobileBottomNavAsync from "./MobileBottomNavAsync";
 import MobileBottomNav from "./MobileBottomNav";
 import Skeleton from "@/components/ui/Skeleton";
@@ -86,9 +85,7 @@ export default async function Header() {
         </div>
 
         <div className="lg:hidden flex items-center justify-between h-[60px] px-4 bg-brand-bg border-b border-white/5">
-          <Suspense fallback={<MobileMenuBarSkeleton />}>
-            <MobileMenuAsync activeRegion={activeRegion} />
-          </Suspense>
+          <MobileMenuAsync activeRegion={activeRegion} />
         </div>
       </header>
 

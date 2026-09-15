@@ -1,9 +1,9 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getBlogCategoryArchive, getAllBlogPosts, fetchGraphQL } from "@/lib/graphql";
-import { GET_FOLLOW_STATUS_QUERY } from "@/lib/graphql/blog";
-import { getCurrentUser, getAuthToken } from "@/lib/auth/session";
+import { getBlogCategoryArchive, getAllBlogPosts } from "@/lib/graphql";
 import BlogCategoryArchiveClient from "@/components/blog/BlogCategoryArchiveClient";
-import FollowCategoryButton from "@/components/blog/FollowCategoryButton";
+import FollowCategoryButtonAsync from "@/components/blog/FollowCategoryButtonAsync";
+import FollowCategoryButtonSkeleton from "@/components/blog/FollowCategoryButtonSkeleton";
 
 interface BlogCategoryPageProps {
   params: Promise<{ region: string; categorySlug: string }>;
@@ -29,20 +29,7 @@ export default async function BlogCategoryPage({ params }: BlogCategoryPageProps
     ? [mainCategory.slug, ...subCategories.map((s: any) => s.slug)]
     : [category.slug];
 
-  const tokenPromise = getAuthToken();
-
-  const [{ posts, pageInfo }, user, token, followData] = await Promise.all([
-    getAllBlogPosts({ categoryIds: catIds, categorySlugsForTags: catSlugsForTags }),
-    getCurrentUser().catch(() => null),
-    tokenPromise,
-    tokenPromise.then((t) =>
-      t
-        ? fetchGraphQL(GET_FOLLOW_STATUS_QUERY, { id: String(mainCategory.databaseId) }, [], "no-store", t)
-        : null
-    ),
-  ]);
-
-  const isFollowing = Boolean(followData?.category?.isFollowedByViewer);
+  const { posts, pageInfo } = await getAllBlogPosts({ categoryIds: catIds, categorySlugsForTags: catSlugsForTags });
 
   return (
     <main className="container mx-auto px-4 md:px-6 py-8 md:py-12 text-white max-w-site">
@@ -51,12 +38,12 @@ export default async function BlogCategoryPage({ params }: BlogCategoryPageProps
           <h1 className="text-2xl md:text-3xl font-bold text-brand-blue mb-2">{mainCategory.name}</h1>
           <p className="text-brand-m_khonsa text-sm">آخرین اخبار و مقالات این بخش</p>
         </div>
-        <FollowCategoryButton
-          categoryId={mainCategory.databaseId}
-          initialFollowerCount={mainCategory.followerCount ?? 0}
-          isLoggedIn={Boolean(user)}
-          initialIsFollowing={isFollowing}
-        />
+        <Suspense fallback={<FollowCategoryButtonSkeleton />}>
+          <FollowCategoryButtonAsync
+            categoryId={mainCategory.databaseId}
+            initialFollowerCount={mainCategory.followerCount ?? 0}
+          />
+        </Suspense>
       </div>
 
       <BlogCategoryArchiveClient

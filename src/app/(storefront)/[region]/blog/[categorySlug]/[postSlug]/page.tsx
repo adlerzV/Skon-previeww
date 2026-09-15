@@ -1,17 +1,14 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  getPostDetail,
-  getRelatedPosts,
-  getProducts,
-  fetchGraphQL,
-} from "@/lib/graphql";
-import { GET_MY_RATING_QUERY } from "@/lib/graphql/blog";
-import { getCurrentUser, getAuthToken } from "@/lib/auth/session";
+import { getPostDetail } from "@/lib/graphql";
 import SocialShare from "@/components/blog/SocialShare";
 import BlogSidebarInfo from "@/components/blog/BlogSidebarInfo";
-import RelatedNewsPanel from "@/components/blog/RelatedNewsPanel";
+import BlogRatingSlot from "@/components/blog/BlogRatingSlot";
+import BlogRatingSkeleton from "@/components/blog/BlogRatingSkeleton";
+import RelatedNewsPanelAsync from "@/components/blog/RelatedNewsPanelAsync";
+import RelatedNewsPanelSkeleton from "@/components/blog/RelatedNewsPanelSkeleton";
 import PostCommentsSection from "@/components/blog/PostCommentsSection";
 
 interface PostPageProps {
@@ -26,28 +23,6 @@ export default async function BlogPostPage({ params }: PostPageProps) {
   const category = post.categories?.nodes?.[0];
   const mainCategory = category?.parent?.node ?? category;
   const canonicalSlug = mainCategory?.slug ?? "uncategorized";
-
-  const tokenPromise = getAuthToken();
-
-  const [user, token, relatedPosts, relatedProducts, ratingData] = await Promise.all([
-    getCurrentUser().catch(() => null),
-    tokenPromise,
-    category
-      ? getRelatedPosts({
-          categoryId: category.databaseId,
-          categorySlug: category.slug,
-          parentCategoryId: category.parent?.node?.databaseId ?? null,
-          parentCategorySlug: category.parent?.node?.slug ?? null,
-          excludeId: post.databaseId,
-        })
-      : Promise.resolve([]),
-    mainCategory ? getProducts(mainCategory.slug, region).then((p) => p.slice(0, 5)) : Promise.resolve([]),
-    tokenPromise.then((t) =>
-      t ? fetchGraphQL(GET_MY_RATING_QUERY, { id: String(post.databaseId) }, [], "no-store", t) : null
-    ),
-  ]);
-
-  const initialMyRating: number | null = ratingData?.post?.myRating ?? null;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
   const canonicalUrl = `${siteUrl}/${region}/blog/${canonicalSlug}/${post.slug}`;
@@ -93,12 +68,16 @@ export default async function BlogPostPage({ params }: PostPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         <aside className="order-2 lg:order-1 lg:col-span-3 lg:sticky lg:top-24">
           <BlogSidebarInfo
-            postId={post.databaseId}
-            averageRating={post.averageRating ?? 0}
-            ratingCount={post.ratingCount ?? 0}
             toc={post.toc ?? []}
-            isLoggedIn={Boolean(user)}
-            initialMyRating={initialMyRating}
+            ratingSlot={
+              <Suspense fallback={<BlogRatingSkeleton />}>
+                <BlogRatingSlot
+                  postId={post.databaseId}
+                  averageRating={post.averageRating ?? 0}
+                  ratingCount={post.ratingCount ?? 0}
+                />
+              </Suspense>
+            }
           />
         </aside>
 
@@ -111,7 +90,9 @@ export default async function BlogPostPage({ params }: PostPageProps) {
         </article>
 
         <aside className="order-3 lg:col-span-3 min-w-0">
-          <RelatedNewsPanel region={region} relatedPosts={relatedPosts} relatedProducts={relatedProducts} />
+          <Suspense fallback={<RelatedNewsPanelSkeleton />}>
+            <RelatedNewsPanelAsync region={region} category={category} excludeId={post.databaseId} />
+          </Suspense>
         </aside>
       </div>
 
@@ -119,8 +100,6 @@ export default async function BlogPostPage({ params }: PostPageProps) {
         <PostCommentsSection
           postId={post.databaseId}
           initialCommentsCount={post.commentsCount ?? 0}
-          isLoggedIn={Boolean(user)}
-          isStaff={Boolean(user?.isStaff)}
         />
       </div>
     </main>

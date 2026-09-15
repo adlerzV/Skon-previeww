@@ -1,25 +1,27 @@
 import { Suspense } from "react";
 import { getPostComments } from "@/lib/graphql/blogComments";
+import { getCurrentUser } from "@/lib/auth/session";
 import CommentThread from "@/components/comments/CommentThread";
 import Skeleton from "@/components/ui/Skeleton";
 
 interface PostCommentsSectionProps {
   postId: number;
   initialCommentsCount?: number;
-  isLoggedIn: boolean;
-  isStaff?: boolean;
 }
 
-async function PostCommentsData({ postId, initialCommentsCount, isLoggedIn, isStaff }: PostCommentsSectionProps) {
-  const { comments } = await getPostComments(postId);
+async function PostCommentsData({ postId, initialCommentsCount }: PostCommentsSectionProps) {
+  const [{ comments }, user] = await Promise.all([
+    getPostComments(postId),
+    getCurrentUser().catch(() => null),
+  ]);
 
   return (
     <CommentThread
       targetId={postId}
       initialComments={comments}
       initialCommentsCount={initialCommentsCount ?? 0}
-      isLoggedIn={isLoggedIn}
-      isStaff={isStaff}
+      isLoggedIn={Boolean(user)}
+      isStaff={Boolean(user?.isStaff)}
       writeEndpoint="/api/blog/comments"
       replyEndpoint="/api/blog/comments/reply"
     />

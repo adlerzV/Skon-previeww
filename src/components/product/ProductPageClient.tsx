@@ -12,14 +12,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ProductNode, VariationCard } from "@/lib/graphql";
 import DeliveryAndPrice from "@/components/product/DeliveryAndPrice";
 import VariationSelector from "@/components/product/VariationSelector";
-import WishlistButton from "@/components/product/WishlistButton";
 
 interface Props {
   product: ProductNode;
   initialEdition?: string;
   activeRegion?: string;
-  isLoggedIn?: boolean;
-  initialInWishlist?: boolean;
+  wishlistSlot?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -96,8 +94,7 @@ export default function ProductPageClient({
   product,
   initialEdition,
   activeRegion,
-  isLoggedIn = false,
-  initialInWishlist = false,
+  wishlistSlot,
   children,
 }: Props) {
   const variations = product.variationCards ?? [];
@@ -418,12 +415,7 @@ export default function ProductPageClient({
                 </div>
               )}
               <h1 className="text-2xl md:text-3xl font-black text-brand-active leading-tight">{product.name}</h1>
-              <WishlistButton
-                productId={product.databaseId}
-                size={22}
-                isLoggedIn={isLoggedIn}
-                initialInWishlist={initialInWishlist}
-              />
+              {wishlistSlot}
             </div>
             {product.shortNotify && (
               <div className="mt-3 bg-brand-zard text-brand-menu text-xs px-3 py-2.5 font-medium border-r-4 border-brand-blue">

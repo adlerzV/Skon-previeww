@@ -1,7 +1,6 @@
-// src/components/Header/MobileMenu.tsx
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -25,15 +24,136 @@ interface Region {
   flagUrl?: string;
 }
 
-interface MobileMenuProps {
+export interface MobileMenuDrawerData {
   shopItems: MobileMenuItem[];
   blogItems: MobileMenuItem[];
   user: { name: string; avatarUrl?: string | null } | null;
-  regions: Region[];
-  activeRegion: string;
 }
 
-export default function MobileMenu({ shopItems, blogItems, user, regions, activeRegion }: MobileMenuProps) {
+interface MobileMenuProps {
+  activeRegion: string;
+  regionsPromise: Promise<Region[]>;
+  drawerDataPromise: Promise<MobileMenuDrawerData>;
+}
+
+function RegionFlagSlot({
+  regionsPromise,
+  activeRegion,
+}: {
+  regionsPromise: Promise<Region[]>;
+  activeRegion: string;
+}) {
+  const regions = use(regionsPromise);
+  return <MobileRegionSwitcher regions={regions} initialRegion={activeRegion} />;
+}
+
+function DrawerUserRow({
+  dataPromise,
+  onNavigate,
+}: {
+  dataPromise: Promise<MobileMenuDrawerData>;
+  onNavigate: () => void;
+}) {
+  const { user } = use(dataPromise);
+
+  return (
+    <Link
+      href="/my-account"
+      onClick={onNavigate}
+      className="flex items-center gap-3 px-5 py-4 border-b border-brand-surface shrink-0 hover:bg-white/5 transition-colors"
+    >
+      {user ? (
+        <>
+          <UserAvatar src={user.avatarUrl} name={user.name} size="md" ring />
+          <div className="flex flex-col min-w-0">
+            <span className="text-white font-bold text-sm truncate">{user.name}</span>
+            <span className="text-brand-m_khonsa text-xs">مشاهده حساب کاربری</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <span className="flex items-center justify-center w-11 h-11 rounded-full bg-white/5 text-brand-m_khonsa shrink-0">
+            <User size={20} strokeWidth={2.5} />
+          </span>
+          <div className="flex flex-col">
+            <span className="text-white font-bold text-sm">ورود / عضویت</span>
+            <span className="text-brand-m_khonsa text-xs">برای پیگیری سفارشات وارد شوید</span>
+          </div>
+        </>
+      )}
+      <ChevronLeft size={16} className="text-brand-m_khonsa mr-auto shrink-0" />
+    </Link>
+  );
+}
+
+function DrawerUserRowSkeleton() {
+  return (
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-brand-surface shrink-0">
+      <Skeleton className="w-11 h-11 rounded-full" />
+      <div className="flex flex-col gap-1.5">
+        <Skeleton className="h-3.5 w-24" />
+        <Skeleton className="h-3 w-32" />
+      </div>
+    </div>
+  );
+}
+
+function DrawerGamesGrid({
+  dataPromise,
+  isBlogSection,
+  buildHref,
+  onNavigate,
+  onPrefetch,
+}: {
+  dataPromise: Promise<MobileMenuDrawerData>;
+  isBlogSection: boolean;
+  buildHref: (link: string) => string;
+  onNavigate: () => void;
+  onPrefetch: (href: string) => void;
+}) {
+  const { shopItems, blogItems } = use(dataPromise);
+  const activeData = isBlogSection ? blogItems : shopItems;
+
+  return (
+    <>
+      {activeData.map((item, i) => (
+        <Link
+          key={i}
+          href={buildHref(item.link)}
+          onClick={onNavigate}
+          onMouseEnter={() => onPrefetch(buildHref(item.link))}
+          className="flex items-center justify-center p-2 rounded hover:bg-white/5"
+          aria-label={item.title}
+        >
+          <div className="relative w-10 h-10">
+            <Image
+              src={item.img}
+              alt={item.title || "game"}
+              fill
+              sizes="40px"
+              className="object-contain"
+              quality={70}
+            />
+          </div>
+        </Link>
+      ))}
+    </>
+  );
+}
+
+function DrawerGamesGridSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="flex items-center justify-center p-2">
+          <Skeleton className="w-10 h-10 rounded-md" />
+        </div>
+      ))}
+    </>
+  );
+}
+
+export default function MobileMenu({ activeRegion, regionsPromise, drawerDataPromise }: MobileMenuProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { region: currentRegion } = useActiveRegion();
@@ -60,8 +180,7 @@ export default function MobileMenu({ shopItems, blogItems, user, regions, active
     }
   }, [isSearchActive]);
 
-  const isBlogSection = pathname?.startsWith("/blog") || pathname?.includes("/blog/");
-  const activeData = isBlogSection ? blogItems : shopItems;
+  const isBlogSection = Boolean(pathname?.startsWith("/blog") || pathname?.includes("/blog/"));
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,7 +228,7 @@ export default function MobileMenu({ shopItems, blogItems, user, regions, active
 
         <div className="flex items-center gap-1 h-full">
           <Suspense fallback={<Skeleton className="w-6 h-4 rounded-[2px]" />}>
-            <MobileRegionSwitcher regions={regions} initialRegion={activeRegion} />
+            <RegionFlagSlot regionsPromise={regionsPromise} activeRegion={activeRegion} />
           </Suspense>
 
           <button
@@ -239,32 +358,9 @@ export default function MobileMenu({ shopItems, blogItems, user, regions, active
           </button>
         </div>
 
-        <Link
-          href="/my-account"
-          onClick={closeMenu}
-          className="flex items-center gap-3 px-5 py-4 border-b border-brand-surface shrink-0 hover:bg-white/5 transition-colors"
-        >
-          {user ? (
-            <>
-              <UserAvatar src={user.avatarUrl} name={user.name} size="md" ring />
-              <div className="flex flex-col min-w-0">
-                <span className="text-white font-bold text-sm truncate">{user.name}</span>
-                <span className="text-brand-m_khonsa text-xs">مشاهده حساب کاربری</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <span className="flex items-center justify-center w-11 h-11 rounded-full bg-white/5 text-brand-m_khonsa shrink-0">
-                <User size={20} strokeWidth={2.5} />
-              </span>
-              <div className="flex flex-col">
-                <span className="text-white font-bold text-sm">ورود / عضویت</span>
-                <span className="text-brand-m_khonsa text-xs">برای پیگیری سفارشات وارد شوید</span>
-              </div>
-            </>
-          )}
-          <ChevronLeft size={16} className="text-brand-m_khonsa mr-auto shrink-0" />
-        </Link>
+        <Suspense fallback={<DrawerUserRowSkeleton />}>
+          <DrawerUserRow dataPromise={drawerDataPromise} onNavigate={closeMenu} />
+        </Suspense>
 
         <div className="flex-1 overflow-y-auto flex flex-col">
           <nav className="flex flex-col text-right w-full">
@@ -309,27 +405,15 @@ export default function MobileMenu({ shopItems, blogItems, user, regions, active
                   shopOpen ? "max-h-[500px] p-2.5 opacity-100" : "max-h-0 p-0 opacity-0"
                 }`}
               >
-                {activeData.map((item, i) => (
-                  <Link
-                    key={i}
-                    href={buildHref(item.link)}
-                    onClick={closeMenu}
-                    onMouseEnter={() => router.prefetch(buildHref(item.link))}
-                    className="flex items-center justify-center p-2 rounded hover:bg-white/5"
-                    aria-label={item.title}
-                  >
-                    <div className="relative w-10 h-10">
-                      <Image
-                        src={item.img}
-                        alt={item.title || "game"}
-                        fill
-                        sizes="40px"
-                        className="object-contain"
-                        quality={70}
-                      />
-                    </div>
-                  </Link>
-                ))}
+                <Suspense fallback={<DrawerGamesGridSkeleton />}>
+                  <DrawerGamesGrid
+                    dataPromise={drawerDataPromise}
+                    isBlogSection={isBlogSection}
+                    buildHref={buildHref}
+                    onNavigate={closeMenu}
+                    onPrefetch={(href) => router.prefetch(href)}
+                  />
+                </Suspense>
               </div>
             </div>
             <div className="border-t border-[#23252b]" />

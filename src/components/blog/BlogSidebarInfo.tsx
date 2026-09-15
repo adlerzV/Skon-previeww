@@ -1,34 +1,19 @@
 import { List } from "lucide-react";
-import BlogRating from "./BlogRating";
 import type { TocItem } from "@/lib/blogToc";
 
 interface BlogSidebarInfoProps {
-  postId: number;
-  averageRating: number;
-  ratingCount: number;
   toc: TocItem[];
-  isLoggedIn: boolean;
-  initialMyRating?: number | null;
+  ratingSlot: React.ReactNode;
 }
 
 export default function BlogSidebarInfo({
-  postId,
-  averageRating,
-  ratingCount,
   toc,
-  isLoggedIn,
-  initialMyRating,
+  ratingSlot,
 }: BlogSidebarInfoProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="bg-brand-surface border border-brand-surface_hover p-5 rounded-lg">
-        <BlogRating
-          postId={postId}
-          initialAverage={averageRating}
-          initialCount={ratingCount}
-          isLoggedIn={isLoggedIn}
-          initialMyRating={initialMyRating}
-        />
+        {ratingSlot}
       </div>
 
       {toc.length > 0 && (
@@ -40,6 +25,7 @@ export default function BlogSidebarInfo({
             <List size={16} className="text-brand-blue" />
             فهرست مطالب
           </summary>
+
           <nav className="flex flex-col gap-0.5 px-4 pb-4">
             {toc.map((item) => (
               <a

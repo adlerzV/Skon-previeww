@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getProductReviews } from "@/lib/graphql/reviews";
+import { getCurrentUser } from "@/lib/auth/session";
 import ProductReviews from "./ProductReviews";
 import Skeleton from "@/components/ui/Skeleton";
 
@@ -7,18 +8,17 @@ interface ProductReviewsSectionProps {
   productId: number;
   averageRating: number;
   reviewCount?: number;
-  isLoggedIn: boolean;
-  isStaff?: boolean;
 }
 
 async function ProductReviewsData({
   productId,
   averageRating,
   reviewCount,
-  isLoggedIn,
-  isStaff,
 }: ProductReviewsSectionProps) {
-  const { reviews, pageInfo } = await getProductReviews(productId);
+  const [{ reviews, pageInfo }, user] = await Promise.all([
+    getProductReviews(productId),
+    getCurrentUser().catch(() => null),
+  ]);
 
   return (
     <ProductReviews
@@ -27,8 +27,8 @@ async function ProductReviewsData({
       pageInfo={pageInfo}
       averageRating={averageRating}
       reviewCount={reviewCount}
-      isLoggedIn={isLoggedIn}
-      isStaff={isStaff}
+      isLoggedIn={Boolean(user)}
+      isStaff={Boolean(user?.isStaff)}
     />
   );
 }
