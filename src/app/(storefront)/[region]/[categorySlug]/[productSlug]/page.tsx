@@ -4,8 +4,7 @@ import { getProductDetail } from "@/lib/graphql";
 import ProductPageClient from "@/components/product/ProductPageClient";
 import ProductDescriptionSections from "@/components/product/ProductDescriptionSections";
 import ProductReviewsSection from "@/components/ProductReviewsSection";
-import WishlistButtonAsync from "@/components/product/WishlistButtonAsync";
-import WishlistButtonSkeleton from "@/components/product/WishlistButtonSkeleton";
+import WishlistButtonAsync, { WishlistButtonSkeleton } from "@/components/product/WishlistButtonAsync";
 
 interface ProductPageProps {
   params: Promise<{ region: string; categorySlug: string; productSlug: string }>;
@@ -17,6 +16,7 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
   const { edition } = await searchParams;
 
   const product = await getProductDetail(productSlug, region);
+
   if (!product) notFound();
 
   const { secondaryGallery, description, reviewCount, averageRating } = product;
@@ -34,8 +34,8 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
         initialEdition={edition}
         activeRegion={region}
         wishlistSlot={
-          <Suspense fallback={<WishlistButtonSkeleton />}>
-            <WishlistButtonAsync productId={product.databaseId} />
+          <Suspense fallback={<WishlistButtonSkeleton size={22} />}>
+            <WishlistButtonAsync productId={product.databaseId} size={22} />
           </Suspense>
         }
       >
