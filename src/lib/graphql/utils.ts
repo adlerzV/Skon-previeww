@@ -17,35 +17,107 @@ const REGION_ALIASES: Record<string, string[]> = {
 
 function normalizeRegionToken(token?: string | null): string {
   if (!token) return "";
+
   const lower = token.trim().toLowerCase();
+
   for (const [canon, aliases] of Object.entries(REGION_ALIASES)) {
-    if (aliases.some((alias) => lower === alias || lower.includes(alias))) return canon;
+    if (aliases.some((alias) => lower === alias || lower.includes(alias))) {
+      return canon;
+    }
   }
+
   return lower;
 }
 
-export function regionsMatch(a?: string | null, b?: string | null): boolean {
+export function regionsMatch(
+  a?: string | null,
+  b?: string | null
+): boolean {
   if (!a || !b) return false;
   return normalizeRegionToken(a) === normalizeRegionToken(b);
 }
 
-type PriceTier = { price: number; regularPrice: number };
+type PriceTier = {
+  price: number;
+  regularPrice: number;
+};
 
-function pickLowest(
-  vars: any[],
-  priceKey: "parsedPrice" | "parsedGiftPrice" | "parsedCodePrice",
-  regularKey: "parsedRegularPrice" | "parsedGiftRegularPrice" | "parsedCodeRegularPrice"
+interface MinTier {
+  price: number | null;
+  regularPrice: number | null;
+}
+
+interface VariationAccumulator {
+  direct: MinTier;
+  gift: MinTier;
+  code: MinTier;
+  hasDirectPrice: boolean;
+  hasGiftOrCode: boolean;
+}
+
+function createAccumulator(): VariationAccumulator {
+  return {
+    direct: {
+      price: null,
+      regularPrice: null,
+    },
+    gift: {
+      price: null,
+      regularPrice: null,
+    },
+    code: {
+      price: null,
+      regularPrice: null,
+    },
+    hasDirectPrice: false,
+    hasGiftOrCode: false,
+  };
+}
+
+function updateMinTier(
+  tier: MinTier,
+  price: unknown,
+  regularPrice: unknown
+): void {
+  if (typeof price !== "number" || price <= 0) {
+    return;
+  }
+
+  if (tier.price === null || price < tier.price) {
+    tier.price = price;
+    tier.regularPrice =
+      typeof regularPrice === "number" ? regularPrice : price;
+  }
+}
+
+function selectLowestTier(
+  accumulator: VariationAccumulator
 ): PriceTier | null {
-  const valid = vars.filter((v) => {
-    const p = v[priceKey];
-    if (typeof p !== "number" || p <= 0) return false;
-    if (priceKey === "parsedCodePrice" && typeof v.codeStockCount === "number" && v.codeStockCount <= 0) return false;
-    return true;
-  });
-  if (valid.length === 0) return null;
-  const lowest = valid.reduce((min, v) => (v[priceKey] < min[priceKey] ? v : min));
-  const reg = lowest[regularKey];
-  return { price: lowest[priceKey], regularPrice: typeof reg === "number" ? reg : lowest[priceKey] };
+  if (accumulator.direct.price !== null) {
+    return {
+      price: accumulator.direct.price,
+      regularPrice:
+        accumulator.direct.regularPrice ?? accumulator.direct.price,
+    };
+  }
+
+  if (accumulator.gift.price !== null) {
+    return {
+      price: accumulator.gift.price,
+      regularPrice:
+        accumulator.gift.regularPrice ?? accumulator.gift.price,
+    };
+  }
+
+  if (accumulator.code.price !== null) {
+    return {
+      price: accumulator.code.price,
+      regularPrice:
+        accumulator.code.regularPrice ?? accumulator.code.price,
+    };
+  }
+
+  return null;
 }
 
 export const formatProducts = (
@@ -55,85 +127,238 @@ export const formatProducts = (
 ): ProductNode[] => {
   const formattedProducts: ProductNode[] = [];
 
-  products.forEach((product) => {
+  for (const product of products) {
     const rawVariations = product.variationCards || [];
-
-    const parsedVariationCards = rawVariations.map((v: any) => {
-      const pGift = (v.giftPriceToman === "disabled" || !v.giftPriceToman
-        ? "disabled"
-        : parsePrice(v.giftPriceToman) ?? "disabled") as number | "disabled";
-
-      const pGiftReg = (v.giftRegularPriceToman === "disabled" || !v.giftRegularPriceToman
-        ? "disabled"
-        : parsePrice(v.giftRegularPriceToman) ?? "disabled") as number | "disabled";
-
-      const pCode = (v.codePriceToman === "disabled" || !v.codePriceToman
-        ? "disabled"
-        : parsePrice(v.codePriceToman) ?? "disabled") as number | "disabled";
-
-      const pCodeReg = (v.codeRegularPriceToman === "disabled" || !v.codeRegularPriceToman
-        ? "disabled"
-        : parsePrice(v.codeRegularPriceToman) ?? "disabled") as number | "disabled";
-
-      return {
-        ...v,
-        parsedPrice: parsePrice(v.price) ?? null,
-        parsedRegularPrice: parsePrice(v.regularPrice) ?? null,
-        parsedGiftPrice: pGift,
-        parsedGiftRegularPrice: pGiftReg,
-        parsedCodePrice: pCode,
-        parsedCodeRegularPrice: pCodeReg,
-      };
-    });
 
     let finalPrice: number | null = null;
     let finalRegularPrice: number | null = null;
     let isAvailableInRegion = true;
 
-    if (parsedVariationCards.length > 0) {
-      const hasRegionAttr = parsedVariationCards.some((v) => !!v.regionSlug);
-      const regionVars = parsedVariationCards.filter((v) => regionsMatch(v.regionSlug, activeRegion));
-      const targetVars = regionVars.length > 0 ? regionVars : parsedVariationCards;
+    if (rawVariations.length > 0) {
+      const parsedVariationCards: VariationCard[] = [];
 
-      const picked =
-        pickLowest(targetVars, "parsedPrice", "parsedRegularPrice") ??
-        pickLowest(targetVars, "parsedGiftPrice", "parsedGiftRegularPrice") ??
-        pickLowest(targetVars, "parsedCodePrice", "parsedCodeRegularPrice");
+      const global = createAccumulator();
+      const region = createAccumulator();
+
+      let hasRegionAttr = false;
+      let regionVariationCount = 0;
+
+      for (const rawVariation of rawVariations) {
+        const pGift = (
+          rawVariation.giftPriceToman === "disabled" ||
+          !rawVariation.giftPriceToman
+            ? "disabled"
+            : parsePrice(rawVariation.giftPriceToman) ?? "disabled"
+        ) as number | "disabled";
+
+        const pGiftReg = (
+          rawVariation.giftRegularPriceToman === "disabled" ||
+          !rawVariation.giftRegularPriceToman
+            ? "disabled"
+            : parsePrice(rawVariation.giftRegularPriceToman) ?? "disabled"
+        ) as number | "disabled";
+
+        const pCode = (
+          rawVariation.codePriceToman === "disabled" ||
+          !rawVariation.codePriceToman
+            ? "disabled"
+            : parsePrice(rawVariation.codePriceToman) ?? "disabled"
+        ) as number | "disabled";
+
+        const pCodeReg = (
+          rawVariation.codeRegularPriceToman === "disabled" ||
+          !rawVariation.codeRegularPriceToman
+            ? "disabled"
+            : parsePrice(rawVariation.codeRegularPriceToman) ?? "disabled"
+        ) as number | "disabled";
+
+        const parsedPrice = parsePrice(rawVariation.price) ?? null;
+        const parsedRegularPrice =
+          parsePrice(rawVariation.regularPrice) ?? null;
+
+        const parsedVariation = {
+          ...rawVariation,
+          parsedPrice,
+          parsedRegularPrice,
+          parsedGiftPrice: pGift,
+          parsedGiftRegularPrice: pGiftReg,
+          parsedCodePrice: pCode,
+          parsedCodeRegularPrice: pCodeReg,
+        } as VariationCard;
+
+        parsedVariationCards.push(parsedVariation);
+
+        const hasCodeStock =
+          typeof parsedVariation.codeStockCount === "number"
+            ? parsedVariation.codeStockCount > 0
+            : true;
+
+        const directValid =
+          typeof parsedPrice === "number" && parsedPrice > 0;
+
+        const giftValid =
+          typeof pGift === "number" && pGift > 0;
+
+        const codeValid =
+          typeof pCode === "number" &&
+          pCode > 0 &&
+          hasCodeStock;
+
+        const anyGiftOrCode =
+          typeof pGift === "number" ||
+          typeof pCode === "number";
+
+        if (directValid) {
+          global.hasDirectPrice = true;
+
+          updateMinTier(
+            global.direct,
+            parsedPrice,
+            parsedRegularPrice
+          );
+        }
+
+        if (anyGiftOrCode) {
+          global.hasGiftOrCode = true;
+        }
+
+        if (giftValid) {
+          updateMinTier(
+            global.gift,
+            pGift,
+            pGiftReg
+          );
+        }
+
+        if (codeValid) {
+          updateMinTier(
+            global.code,
+            pCode,
+            pCodeReg
+          );
+        }
+
+        if (parsedVariation.regionSlug) {
+          hasRegionAttr = true;
+        }
+
+        const matchesActiveRegion = regionsMatch(
+          parsedVariation.regionSlug,
+          activeRegion
+        );
+
+        if (!matchesActiveRegion) {
+          continue;
+        }
+
+        regionVariationCount++;
+
+        if (directValid) {
+          region.hasDirectPrice = true;
+
+          updateMinTier(
+            region.direct,
+            parsedPrice,
+            parsedRegularPrice
+          );
+        }
+
+        if (anyGiftOrCode) {
+          region.hasGiftOrCode = true;
+        }
+
+        if (giftValid) {
+          updateMinTier(
+            region.gift,
+            pGift,
+            pGiftReg
+          );
+        }
+
+        if (codeValid) {
+          updateMinTier(
+            region.code,
+            pCode,
+            pCodeReg
+          );
+        }
+      }
+
+
+      const target =
+        regionVariationCount > 0
+          ? region
+          : global;
+
+      const picked = selectLowestTier(target);
 
       finalPrice = picked?.price ?? null;
       finalRegularPrice = picked?.regularPrice ?? null;
 
-      const hasDirectPrice = targetVars.some((v) => typeof v.parsedPrice === "number" && v.parsedPrice > 0);
-      const hasGiftOrCode = targetVars.some(
-        (v) => typeof v.parsedGiftPrice === "number" || typeof v.parsedCodePrice === "number"
-      );
-
       isAvailableInRegion = hasRegionAttr
-        ? regionVars.length > 0 && (hasDirectPrice || hasGiftOrCode)
-        : hasDirectPrice || hasGiftOrCode || finalPrice != null;
-    } else {
-      finalPrice = parsePrice(product.price) ?? null;
-      finalRegularPrice = parsePrice(product.regularPrice) ?? null;
-      isAvailableInRegion = finalPrice != null && finalPrice > 0;
+        ? regionVariationCount > 0 &&
+          (target.hasDirectPrice || target.hasGiftOrCode)
+        : target.hasDirectPrice ||
+          target.hasGiftOrCode ||
+          finalPrice != null;
+
+      formattedProducts.push({
+        ...product,
+        shortDescription: sanitizeHtml(
+          product.shortDescription
+        ),
+        description: sanitizeHtml(
+          product.description
+        ),
+        secondaryGallery: product.secondaryGallery
+          ? product.secondaryGallery.map((item) => ({
+              ...item,
+              description:
+                sanitizeHtml(item.description) ??
+                item.description,
+            }))
+          : product.secondaryGallery,
+        parsedPrice: finalPrice,
+        parsedRegularPrice: finalRegularPrice,
+        variationCards: parsedVariationCards,
+        isVariation: parsedVariationCards.length > 0,
+        isAvailableInRegion,
+      });
+
+      continue;
     }
+
+    finalPrice = parsePrice(product.price) ?? null;
+    finalRegularPrice =
+      parsePrice(product.regularPrice) ?? null;
+
+    isAvailableInRegion =
+      finalPrice != null &&
+      finalPrice > 0;
 
     formattedProducts.push({
       ...product,
-      shortDescription: sanitizeHtml(product.shortDescription),
-      description: sanitizeHtml(product.description),
+      shortDescription: sanitizeHtml(
+        product.shortDescription
+      ),
+      description: sanitizeHtml(
+        product.description
+      ),
       secondaryGallery: product.secondaryGallery
         ? product.secondaryGallery.map((item) => ({
             ...item,
-            description: sanitizeHtml(item.description) ?? item.description,
+            description:
+              sanitizeHtml(item.description) ??
+              item.description,
           }))
         : product.secondaryGallery,
       parsedPrice: finalPrice,
       parsedRegularPrice: finalRegularPrice,
-      variationCards: parsedVariationCards,
-      isVariation: parsedVariationCards.length > 0,
+      variationCards: rawVariations,
+      isVariation: rawVariations.length > 0,
       isAvailableInRegion,
     });
-  });
+  }
 
   return formattedProducts;
 };
