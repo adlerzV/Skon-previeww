@@ -50,6 +50,7 @@ function isDeliveryAttr(name: string, values: string[]): boolean {
     n.includes("method")
   )
     return true;
+
   return values.some((v) => {
     const val = normalize(v);
     return (
@@ -101,8 +102,11 @@ export default function ProductPageClient({
   const variations = product.variationCards ?? [];
   const activeThumbRef = useRef<HTMLButtonElement>(null);
   const heroRowRef = useRef<HTMLDivElement>(null);
+  const leftColumnRef = useRef<HTMLDivElement>(null);
+  const rightColumnRef = useRef<HTMLDivElement>(null);
   const hasScrolledThumbRef = useRef(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const [stickyColumn, setStickyColumn] = useState<"left" | "right" | null>(null);
 
   const effectiveRegion =
     !activeRegion || activeRegion === "$undefined" || activeRegion === "undefined"
@@ -153,7 +157,9 @@ export default function ProductPageClient({
           valLower === regionLower ||
           slugLower === regionLower ||
           ((regionLower === "eu" || regionLower === "eu-global") &&
-            (valLower.includes("eu") || valLower.includes("اروپا") || slugLower.includes("eu"))) ||
+            (valLower.includes("eu") ||
+              valLower.includes("اروپا") ||
+              slugLower.includes("eu"))) ||
           (regionLower === "us" &&
             (valLower.includes("us") ||
               valLower.includes("آمریکا") ||
@@ -198,11 +204,18 @@ export default function ProductPageClient({
           variations.some((v) => {
             const matchesPrev = groupedAttributes
               .slice(0, i)
-              .every((g) => v.attributes?.some((a) => a.name === g.name && a.value === result[g.name]));
-            const matchesCurrent = v.attributes?.some((a) => a.name === group.name && a.value === candidate.value);
+              .every((g) =>
+                v.attributes?.some((a) => a.name === g.name && a.value === result[g.name])
+              );
+            const matchesCurrent = v.attributes?.some(
+              (a) => a.name === group.name && a.value === candidate.value
+            );
             const matchesRegion = regionInfo
-              ? v.attributes?.some((a) => a.name === regionInfo.name && a.value === regionInfo.value)
+              ? v.attributes?.some(
+                  (a) => a.name === regionInfo.name && a.value === regionInfo.value
+                )
               : true;
+
             return matchesPrev && matchesCurrent && matchesRegion && hasStock(v);
           })
         );
@@ -227,6 +240,7 @@ export default function ProductPageClient({
   const combinedAggregateVar = useMemo((): VariationCard | null => {
     if (variations.length === 0) {
       if (product.parsedPrice == null) return null;
+
       return {
         databaseId: product.databaseId,
         name: product.name,
@@ -252,9 +266,13 @@ export default function ProductPageClient({
         const attr = v.attributes?.find((a) => a.name === g.name);
         return attr ? attr.value === selectedAttrs[g.name] : true;
       });
+
       const matchesRegion = regionInfo
-        ? v.attributes?.some((a) => a.name === regionInfo.name && a.value === regionInfo.value)
+        ? v.attributes?.some(
+            (a) => a.name === regionInfo.name && a.value === regionInfo.value
+          )
         : true;
+
       return matchesVisible && matchesRegion;
     });
 
@@ -262,7 +280,11 @@ export default function ProductPageClient({
       matching.length > 0
         ? matching
         : variations.filter((v) =>
-            regionInfo ? v.attributes?.some((a) => a.name === regionInfo.name && a.value === regionInfo.value) : true
+            regionInfo
+              ? v.attributes?.some(
+                  (a) => a.name === regionInfo.name && a.value === regionInfo.value
+                )
+              : true
           );
 
     if (candidates.length === 0) return variations[0] ?? null;
@@ -276,26 +298,56 @@ export default function ProductPageClient({
     let accCodeStock: number | undefined = undefined;
 
     for (const mv of candidates) {
-      if (mv.parsedPrice != null && (accPrice === null || mv.parsedPrice < accPrice)) {
+      if (
+        mv.parsedPrice != null &&
+        (accPrice === null || mv.parsedPrice < accPrice)
+      ) {
         accPrice = mv.parsedPrice;
         accRegularPrice = mv.parsedRegularPrice ?? mv.parsedPrice;
       }
-      if (typeof mv.parsedGiftPrice === "number" && (accGift === "disabled" || mv.parsedGiftPrice < (accGift as number))) {
+
+      if (
+        typeof mv.parsedGiftPrice === "number" &&
+        (accGift === "disabled" ||
+          mv.parsedGiftPrice < (accGift as number))
+      ) {
         accGift = mv.parsedGiftPrice;
-        accGiftRegular = typeof mv.parsedGiftRegularPrice === "number" ? mv.parsedGiftRegularPrice : mv.parsedGiftPrice;
+        accGiftRegular =
+          typeof mv.parsedGiftRegularPrice === "number"
+            ? mv.parsedGiftRegularPrice
+            : mv.parsedGiftPrice;
       }
-      if (typeof mv.parsedCodePrice === "number" && (accCode === "disabled" || mv.parsedCodePrice < (accCode as number))) {
+
+      if (
+        typeof mv.parsedCodePrice === "number" &&
+        (accCode === "disabled" ||
+          mv.parsedCodePrice < (accCode as number))
+      ) {
         accCode = mv.parsedCodePrice;
-        accCodeRegular = typeof mv.parsedCodeRegularPrice === "number" ? mv.parsedCodeRegularPrice : mv.parsedCodePrice;
+        accCodeRegular =
+          typeof mv.parsedCodeRegularPrice === "number"
+            ? mv.parsedCodeRegularPrice
+            : mv.parsedCodePrice;
         accCodeStock = mv.codeStockCount;
       }
 
-      const comboText = mv.attributes?.map((a) => a.value.toLowerCase()).join(" ") ?? "";
-      if ((comboText.includes("گیفت") || comboText.includes("gift")) && mv.parsedPrice != null && accGift === "disabled") {
+      const comboText =
+        mv.attributes?.map((a) => a.value.toLowerCase()).join(" ") ?? "";
+
+      if (
+        (comboText.includes("گیفت") || comboText.includes("gift")) &&
+        mv.parsedPrice != null &&
+        accGift === "disabled"
+      ) {
         accGift = mv.parsedPrice;
         accGiftRegular = mv.parsedRegularPrice ?? mv.parsedPrice;
       }
-      if ((comboText.includes("کد") || comboText.includes("code")) && mv.parsedPrice != null && accCode === "disabled") {
+
+      if (
+        (comboText.includes("کد") || comboText.includes("code")) &&
+        mv.parsedPrice != null &&
+        accCode === "disabled"
+      ) {
         accCode = mv.parsedPrice;
         accCodeRegular = mv.parsedRegularPrice ?? mv.parsedPrice;
         accCodeStock = mv.codeStockCount;
@@ -320,6 +372,7 @@ export default function ProductPageClient({
 
     const add = (url: string | undefined | null) => {
       const trimmed = url?.trim();
+
       if (trimmed && !seen.has(trimmed)) {
         seen.add(trimmed);
         images.push(trimmed);
@@ -327,6 +380,7 @@ export default function ProductPageClient({
     };
 
     add(product.imageLarge?.sourceUrl || product.image?.sourceUrl);
+
     for (const v of variations) add(v.imageUrl);
     for (const g of product.galleryImages?.nodes ?? []) add(g.sourceUrl);
 
@@ -335,15 +389,23 @@ export default function ProductPageClient({
 
   const firstBranchVarImageUrl = useMemo(() => {
     if (variations.length === 0 || groupedAttributes.length === 0) return null;
+
     const firstGroup = groupedAttributes[0];
     const selectedVal = selectedAttrs[firstGroup.name];
+
     return (
-      variations.find((v) => v.attributes?.some((a) => a.name === firstGroup.name && a.value === selectedVal) && v.imageUrl)
-        ?.imageUrl?.trim() ?? null
+      variations.find(
+        (v) =>
+          v.attributes?.some(
+            (a) => a.name === firstGroup.name && a.value === selectedVal
+          ) && v.imageUrl
+      )?.imageUrl?.trim() ?? null
     );
   }, [variations, groupedAttributes, selectedAttrs]);
 
-  const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(
+    null
+  );
 
   const displayImage =
     selectedGalleryImage ||
@@ -362,11 +424,17 @@ export default function ProductPageClient({
       hasScrolledThumbRef.current = true;
       return;
     }
-    activeThumbRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+
+    activeThumbRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
   }, [currentIndex]);
 
   useEffect(() => {
     const el = heroRowRef.current;
+
     if (!el || typeof IntersectionObserver === "undefined") return;
 
     const observer = new IntersectionObserver(
@@ -377,26 +445,78 @@ export default function ProductPageClient({
     );
 
     observer.observe(el);
+
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const left = leftColumnRef.current;
+    const right = rightColumnRef.current;
+
+    if (!left || !right || typeof ResizeObserver === "undefined") return;
+
+    const updateStickyColumn = () => {
+      if (window.innerWidth < 1024) {
+        setStickyColumn(null);
+        return;
+      }
+
+      const leftHeight = left.getBoundingClientRect().height;
+      const rightHeight = right.getBoundingClientRect().height;
+
+      if (leftHeight < rightHeight) {
+        setStickyColumn("left");
+      } else if (rightHeight < leftHeight) {
+        setStickyColumn("right");
+      } else {
+        setStickyColumn(null);
+      }
+    };
+
+    updateStickyColumn();
+
+    const observer = new ResizeObserver(updateStickyColumn);
+
+    observer.observe(left);
+    observer.observe(right);
+
+    window.addEventListener("resize", updateStickyColumn);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateStickyColumn);
+    };
+  }, [product.databaseId]);
 
   const handleAttrSelect = useCallback(
     (name: string, val: string) => {
       setSelectedAttrs((prev) => {
         const draft = { ...prev, [name]: val };
+
         if (regionInfo) draft[regionInfo.name] = regionInfo.value;
 
         const changeIdx = groupedAttributes.findIndex((g) => g.name === name);
 
         for (let i = changeIdx + 1; i < groupedAttributes.length; i++) {
           const nextGroup = groupedAttributes[i];
+
           const stillValid = variations.some((v) => {
             const upToHere = groupedAttributes
               .slice(0, i + 1)
-              .every((g) => v.attributes?.some((a) => a.name === g.name && a.value === draft[g.name]));
+              .every((g) =>
+                v.attributes?.some(
+                  (a) => a.name === g.name && a.value === draft[g.name]
+                )
+              );
+
             const matchesRegion = regionInfo
-              ? v.attributes?.some((a) => a.name === regionInfo.name && a.value === regionInfo.value)
+              ? v.attributes?.some(
+                  (a) =>
+                    a.name === regionInfo.name &&
+                    a.value === regionInfo.value
+                )
               : true;
+
             return upToHere && matchesRegion && hasStock(v);
           });
 
@@ -405,19 +525,46 @@ export default function ProductPageClient({
               variations.some((v) => {
                 const pastLayers = groupedAttributes
                   .slice(0, i)
-                  .every((g) => v.attributes?.some((a) => a.name === g.name && a.value === draft[g.name]));
-                const matchesCand = v.attributes?.some((a) => a.name === nextGroup.name && a.value === cand.value);
+                  .every((g) =>
+                    v.attributes?.some(
+                      (a) =>
+                        a.name === g.name &&
+                        a.value === draft[g.name]
+                    )
+                  );
+
+                const matchesCand = v.attributes?.some(
+                  (a) =>
+                    a.name === nextGroup.name &&
+                    a.value === cand.value
+                );
+
                 const matchesRegion = regionInfo
-                  ? v.attributes?.some((a) => a.name === regionInfo.name && a.value === regionInfo.value)
+                  ? v.attributes?.some(
+                      (a) =>
+                        a.name === regionInfo.name &&
+                        a.value === regionInfo.value
+                    )
                   : true;
-                return pastLayers && matchesCand && matchesRegion && hasStock(v);
+
+                return (
+                  pastLayers &&
+                  matchesCand &&
+                  matchesRegion &&
+                  hasStock(v)
+                );
               })
             );
-            draft[nextGroup.name] = fallback?.value ?? nextGroup.values[0]?.value ?? "";
+
+            draft[nextGroup.name] =
+              fallback?.value ?? nextGroup.values[0]?.value ?? "";
           }
         }
 
-        if (changeIdx === 0) setSelectedGalleryImage(null);
+        if (changeIdx === 0) {
+          setSelectedGalleryImage(null);
+        }
+
         return draft;
       });
     },
@@ -433,19 +580,39 @@ export default function ProductPageClient({
         selectedAttrs={selectedAttrs}
         onAttributeSelect={handleAttrSelect}
         price={combinedAggregateVar?.parsedPrice ?? null}
-        regularPrice={typeof combinedAggregateVar?.parsedRegularPrice === "number" ? combinedAggregateVar.parsedRegularPrice : null}
+        regularPrice={
+          typeof combinedAggregateVar?.parsedRegularPrice === "number"
+            ? combinedAggregateVar.parsedRegularPrice
+            : null
+        }
         onCtaClick={() => {
-          heroRowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          heroRowRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
         }}
       />
 
-      <div ref={heroRowRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 w-full items-stretch">
-        <div className="lg:col-span-4 flex flex-col gap-6 w-full">
+      <div
+        ref={heroRowRef}
+        className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 w-full items-start"
+      >
+        <div
+          ref={leftColumnRef}
+          className={`lg:col-span-4 flex flex-col gap-6 w-full ${
+            stickyColumn === "left"
+              ? "lg:sticky lg:top-6 lg:self-start"
+              : ""
+          }`}
+        >
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl md:text-3xl font-black text-brand-active leading-tight">{product.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-black text-brand-active leading-tight">
+                {product.name}
+              </h1>
               {wishlistSlot}
             </div>
+
             {product.shortNotify && (
               <div className="mt-3 bg-brand-zard text-brand-menu text-xs px-3 py-2.5 font-medium border-r-4 border-brand-blue">
                 {product.shortNotify}
@@ -472,7 +639,15 @@ export default function ProductPageClient({
             />
           </div>
         </div>
-        <div className="lg:col-span-8 flex flex-col gap-6 w-full">
+
+        <div
+          ref={rightColumnRef}
+          className={`lg:col-span-8 flex flex-col gap-6 w-full ${
+            stickyColumn === "right"
+              ? "lg:sticky lg:top-6 lg:self-start"
+              : ""
+          }`}
+        >
           <div className="flex flex-col sm:flex-row sm:items-stretch gap-3 w-full">
             <div className="relative w-full sm:flex-1 aspect-[16/9] bg-brand-surface overflow-hidden border border-brand-surface_hover shadow-lg group">
               <Image
@@ -484,18 +659,34 @@ export default function ProductPageClient({
                 className="object-cover transition-opacity duration-300"
                 sizes="(max-width: 1024px) 100vw, 70vw"
               />
+
               {allGalleryImages.length > 1 && (
                 <>
                   <GalleryNavButton
                     direction="prev"
                     disabled={currentIndex === 0}
-                    onClick={() => setSelectedGalleryImage(allGalleryImages[currentIndex - 1])}
+                    onClick={() =>
+                      setSelectedGalleryImage(
+                        allGalleryImages[currentIndex - 1]
+                      )
+                    }
                   />
+
                   <GalleryNavButton
                     direction="next"
-                    disabled={currentIndex === allGalleryImages.length - 1}
-                    onClick={() => setSelectedGalleryImage(allGalleryImages[currentIndex + 1])}
+                    disabled={
+                      currentIndex === allGalleryImages.length - 1
+                    }
+                    onClick={() =>
+                      setSelectedGalleryImage(
+                        allGalleryImages[currentIndex + 1]
+                      )
+                    }
                   />
+
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 bg-brand-bg/80 text-brand-white text-xs font-bold px-3 py-1.5 border border-brand-surface_hover">
+                    {currentIndex + 1} / {allGalleryImages.length}
+                  </div>
                 </>
               )}
             </div>
@@ -535,7 +726,9 @@ export default function ProductPageClient({
             <div className="bg-brand-menu p-6 border border-brand-surface_hover">
               <div
                 className="text-brand-surface_m text-sm leading-8 prose prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: product.shortDescription }}
+                dangerouslySetInnerHTML={{
+                  __html: product.shortDescription,
+                }}
               />
             </div>
           )}
