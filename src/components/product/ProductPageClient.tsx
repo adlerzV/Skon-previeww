@@ -439,8 +439,10 @@ export default function ProductPageClient({
         }}
       />
 
-      <div ref={heroRowRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 w-full items-stretch">
-        <div className="lg:col-span-4 flex flex-col gap-6 w-full">
+      {/* تبدیل به items-start برای آزاد شدن ارتفاع هر دو ستون */}
+      <div ref={heroRowRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 w-full items-start">
+        {/* ستون اول: قفل شونده هوشمند (sticky) */}
+        <div className="lg:col-span-4 lg:sticky lg:top-6 lg:self-start flex flex-col gap-6 w-full">
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl md:text-3xl font-black text-brand-active leading-tight">{product.name}</h1>
@@ -461,18 +463,19 @@ export default function ProductPageClient({
             regionInfo={regionInfo}
           />
 
-          <div className="flex-1 flex flex-col min-h-0">
-            <DeliveryAndPrice
-              selectedVariation={combinedAggregateVar}
-              productId={product.databaseId}
-              productName={product.name}
-              selectedAttrs={selectedAttrs}
-              groupedAttributes={groupedAttributes}
-              regionInfo={regionInfo}
-            />
-          </div>
+          {/* حذف flex-1: حالا دکمه خرید دقیقاً زیر گزینه‌ها می‌نشیند */}
+          <DeliveryAndPrice
+            selectedVariation={combinedAggregateVar}
+            productId={product.databaseId}
+            productName={product.name}
+            selectedAttrs={selectedAttrs}
+            groupedAttributes={groupedAttributes}
+            regionInfo={regionInfo}
+          />
         </div>
-        <div className="lg:col-span-8 flex flex-col gap-6 w-full">
+
+        {/* ستون دوم: قفل شونده هوشمند (sticky) */}
+        <div className="lg:col-span-8 lg:sticky lg:top-6 lg:self-start flex flex-col gap-6 w-full">
           <div className="flex flex-col sm:flex-row sm:items-stretch gap-3 w-full">
             <div className="relative w-full sm:flex-1 aspect-[16/9] bg-brand-surface overflow-hidden border border-brand-surface_hover shadow-lg group">
               <Image
