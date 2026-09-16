@@ -117,12 +117,12 @@ export default function VariationSelector({
   }, [groupedAttributes, variations, selectedAttrs, regionInfo]);
 
   return (
-    <div className="flex flex-col gap-5 w-full">
+    <div className="flex flex-col md:flex-row gap-6 w-full">
       {groupedAttributes.map((group) => {
         const cleanGroupName = group.name.replace("pa_", "").replace("attribute_", "");
 
         return (
-          <div key={group.name} className="flex flex-col gap-2.5 w-full min-w-0">
+          <div key={group.name} className="flex-1 flex flex-col gap-2.5 min-w-0">
             <span className="text-xs font-bold text-brand-surface_m">
               انتخاب {cleanGroupName}:
             </span>
@@ -139,46 +139,42 @@ export default function VariationSelector({
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => state.available && onAttributeSelect(group.name, opt.value)}
+                  onClick={() => state.available && onAttributeSelect(group.name, opt.value)}
                     disabled={!state.available}
-                    className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 text-right transition-all duration-150 border ${
+                    className={`w-full flex items-center gap-3 p-6 text-right transition-all duration-150 border border-brand-surface_hover ${
                       isSelected
-                        ? "bg-brand-surface border-2 border-brand-blue shadow-[0_0_12px_rgba(0,116,224,0.25)]"
+                        ? "bg-brand-surface border-r-8 border-r-brand-blue"
                         : state.available
-                        ? "bg-transparent border-brand-surface_hover hover:border-brand-surface_m hover:bg-brand-surface/40 text-brand-m_khonsa"
-                        : "bg-transparent border-brand-surface_hover/40 opacity-40 cursor-not-allowed text-brand-surface_m"
+                        ? "bg-brand-menu border-r-1 border-r-brand-surface_hover hover:bg-brand-surface_hover"
+                        : "bg-brand-menu/40 border-brand-surface_hover/40 border-r-1 border-r-brand-surface_hover/40 cursor-not-allowed"
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      {opt.flagUrl && (
-                        <Image
-                          src={opt.flagUrl}
-                          alt=""
-                          width={28}
-                          height={20}
-                          className={`w-7 h-5 object-cover rounded-sm shrink-0 ${!state.available ? "opacity-20" : ""}`}
-                        />
-                      )}
-                      <span
-                        className={`font-bold text-sm leading-tight truncate ${
-                          isSelected
-                            ? "text-brand-active"
-                            : state.available
-                            ? "text-brand-white"
-                            : "text-brand-surface_m line-through"
-                        }`}
-                      >
-                        {opt.value}
-                      </span>
-                    </div>
+                    {opt.flagUrl && (
+                      <Image
+                        src={opt.flagUrl}
+                        alt=""
+                        width={32}
+                        height={24}
+                        className={`w-8 h-6 object-cover rounded-sm shrink-0 ${!state.available ? "opacity-20" : ""}`}
+                      />
+                    )}
+                    <span
+                      className={`flex-1 font-bold text-sm leading-tight ${
+                        isSelected
+                          ? "text-brand-active"
+                          : state.available
+                          ? "text-brand-m_khonsa"
+                          : "text-brand-surface_m/30 line-through"
+                      }`}
+                    >
+                      {opt.value}
+                    </span>
 
-                    <div className="shrink-0 mr-2">
-                      {state.available ? (
-                        <PriceDisplay price={state.price} regularPrice={state.regularPrice ?? undefined} compact />
-                      ) : (
-                        <span className="text-[11px] font-bold text-red-500/80">ناموجود</span>
-                      )}
-                    </div>
+                    {state.available ? (
+                      <PriceDisplay price={state.price} regularPrice={state.regularPrice ?? undefined} compact />
+                    ) : (
+                      <span className="text-[11px] font-bold text-red-500/70 shrink-0">ناموجود</span>
+                    )}
                   </button>
                 );
               })}
