@@ -7,12 +7,21 @@ interface GroupedAttribute {
   values: { value: string; flagUrl?: string }[];
 }
 
+export interface DeliveryOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+
 interface ProductStickyBarProps {
   visible: boolean;
   productName: string;
   groupedAttributes: GroupedAttribute[];
   selectedAttrs: Record<string, string>;
   onAttributeSelect: (name: string, value: string) => void;
+  deliveryOptions?: DeliveryOption[];
+  selectedDelivery?: string;
+  onDeliverySelect?: (value: string) => void;
   price: number | null;
   regularPrice: number | null;
   onCtaClick: () => void;
@@ -24,6 +33,9 @@ export default function ProductStickyBar({
   groupedAttributes,
   selectedAttrs,
   onAttributeSelect,
+  deliveryOptions,
+  selectedDelivery,
+  onDeliverySelect,
   price,
   regularPrice,
   onCtaClick,
@@ -32,16 +44,16 @@ export default function ProductStickyBar({
     <div
       dir="rtl"
       aria-hidden={!visible}
-      className={`fixed top-[60px] lg:top-[80px] inset-x-0 z-[9500] bg-[#15171e]/97 backdrop-blur-md border-b border-white/10 shadow-[0_10px_25px_rgba(0,0,0,0.5)] transition-all duration-250 ${
+      className={`fixed top-0 inset-x-0 z-[9500] bg-[#15171e] border-b border-brand-surface_hover shadow-[0_8px_20px_rgba(0,0,0,0.6)] transition-transform duration-200 ease-out ${
         visible ? "translate-y-0 opacity-100 pointer-events-auto" : "-translate-y-full opacity-0 pointer-events-none"
       }`}
     >
-      <div className="container mx-auto max-w-site px-4 md:px-6 h-[58px] md:h-[64px] flex items-center gap-3 md:gap-4">
-        <span className="hidden sm:block text-sm font-bold text-white truncate max-w-[160px] md:max-w-[220px] shrink-0">
+      <div className="container mx-auto max-w-site px-4 md:px-6 h-[58px] md:h-[62px] flex items-center gap-3 md:gap-4">
+        <span className="hidden sm:block text-sm font-bold text-white truncate max-w-[150px] md:max-w-[200px] shrink-0">
           {productName}
         </span>
 
-        <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-hide py-1">
           {groupedAttributes.map((group) => {
             const cleanName = group.name.replace("pa_", "").replace("attribute_", "");
             return (
@@ -49,17 +61,37 @@ export default function ProductStickyBar({
                 key={group.name}
                 value={selectedAttrs[group.name] ?? ""}
                 onChange={(e) => onAttributeSelect(group.name, e.target.value)}
-                className="bg-brand-surface border border-brand-surface_hover text-white text-xs font-bold px-2.5 py-1.5 focus:outline-none focus:border-brand-blue cursor-pointer shrink-0 min-w-[110px]"
+                className="bg-brand-surface border border-brand-surface_hover hover:border-brand-surface_m text-white text-xs font-bold px-2.5 py-1.5 focus:outline-none focus:border-brand-blue cursor-pointer shrink-0 min-w-[110px]"
                 aria-label={cleanName}
               >
                 {group.values.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
+                  <option key={opt.value} value={opt.value} className="bg-brand-surface text-white">
                     {opt.value}
                   </option>
                 ))}
               </select>
             );
           })}
+
+          {deliveryOptions && deliveryOptions.length > 0 && (
+            <select
+              value={selectedDelivery ?? ""}
+              onChange={(e) => onDeliverySelect?.(e.target.value)}
+              className="bg-brand-surface border border-brand-surface_hover hover:border-brand-surface_m text-brand-zard text-xs font-bold px-2.5 py-1.5 focus:outline-none focus:border-brand-blue cursor-pointer shrink-0 min-w-[120px]"
+              aria-label="روش تحویل"
+            >
+              {deliveryOptions.map((opt) => (
+                <option
+                  key={opt.value}
+                  value={opt.value}
+                  disabled={opt.disabled}
+                  className="bg-brand-surface text-white"
+                >
+                  {opt.label} {opt.disabled ? "(ناموجود)" : ""}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex items-center gap-2.5 md:gap-3 shrink-0">

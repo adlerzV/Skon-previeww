@@ -1,11 +1,13 @@
-import React from 'react';
+"use client";
+
+import React from "react";
 
 interface PriceDisplayProps {
   price: number | null;
   regularPrice?: number | null;
-  giftPrice?: number | 'disabled';
-  codePrice?: number | 'disabled';
-  selectedType?: 'standard' | 'gift' | 'code';
+  giftPrice?: number | "disabled";
+  codePrice?: number | "disabled";
+  selectedType?: "standard" | "gift" | "code";
   compact?: boolean;
 }
 
@@ -14,22 +16,22 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
   regularPrice = null,
   giftPrice,
   codePrice,
-  selectedType = 'standard',
+  selectedType = "standard",
   compact = false,
 }) => {
   const formatPrice = (value: number | null) => {
-    if (value === null || value === 0) return 'رایگان';
-    return value.toLocaleString('fa-IR') + ' تومان';
+    if (value === null || value === 0) return "رایگان";
+    return value.toLocaleString("fa-IR") + " تومان";
   };
 
   const hasDiscount = Boolean(regularPrice && price && regularPrice > price);
-  const priceSizeClass = compact ? 'text-sm font-black' : 'text-2xl font-black';
-  const labelSizeClass = compact ? 'text-[10px]' : 'text-xs';
-  const strikeSizeClass = compact ? 'text-[10px]' : 'text-sm';
+  const priceSizeClass = compact ? "text-base md:text-lg font-black" : "text-2xl md:text-3xl font-black";
+  const labelSizeClass = compact ? "text-xs font-bold" : "text-sm font-bold";
+  const strikeSizeClass = compact ? "text-xs font-semibold" : "text-sm md:text-base font-semibold";
 
-  const getDerivedRegularPrice = (currentPrice: number | 'disabled' | undefined): number | null => {
+  const getDerivedRegularPrice = (currentPrice: number | "disabled" | undefined): number | null => {
     if (!hasDiscount || !regularPrice || !price) return null;
-    if (typeof currentPrice !== 'number' || currentPrice <= 0) return null;
+    if (typeof currentPrice !== "number" || currentPrice <= 0) return null;
 
     const discountRatio = (regularPrice - price) / regularPrice;
     if (discountRatio <= 0 || discountRatio >= 1) return null;
@@ -37,56 +39,54 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
     return Math.round(currentPrice / (1 - discountRatio));
   };
 
-  if (selectedType === 'gift') {
-    const isGiftDisabled = giftPrice === 'disabled' || !giftPrice;
+  if (selectedType === "gift") {
+    const isGiftDisabled = giftPrice === "disabled" || !giftPrice;
     const derivedRegularPrice = !isGiftDisabled ? getDerivedRegularPrice(giftPrice) : null;
 
     return (
-      <div className="flex flex-col gap-1 items-center">
-        <span className={`${labelSizeClass} text-neutral-400`}>قیمت تحویل به‌صورت گیفت</span>
+      <div className="flex items-center gap-2.5 whitespace-nowrap" dir="rtl">
+        {!compact && <span className={`${labelSizeClass} text-brand-white`}>تحویل گیفت:</span>}
         {derivedRegularPrice && (
-          <span className={`${strikeSizeClass} text-neutral-500 line-through decoration-red-500/70`}>
+          <span className={`${strikeSizeClass} text-brand-surface_m line-through decoration-brand-surface_m/80`}>
             {formatPrice(derivedRegularPrice)}
           </span>
         )}
-        <span className={`${priceSizeClass} ${derivedRegularPrice ? 'text-brand-sabz' : 'text-white'}`}>
-          {isGiftDisabled ? 'غیرفعال' : formatPrice(giftPrice as number)}
+        <span className={`${priceSizeClass} ${isGiftDisabled ? "text-red-500" : derivedRegularPrice ? "text-brand-sabz" : "text-brand-white"}`}>
+          {isGiftDisabled ? "غیرفعال" : formatPrice(giftPrice as number)}
         </span>
       </div>
     );
   }
 
-  if (selectedType === 'code') {
-    const isCodeDisabled = codePrice === 'disabled' || !codePrice;
+  if (selectedType === "code") {
+    const isCodeDisabled = codePrice === "disabled" || !codePrice;
     const derivedRegularPrice = !isCodeDisabled ? getDerivedRegularPrice(codePrice) : null;
 
     return (
-      <div className="flex flex-col gap-1 items-center">
-        <span className={`${labelSizeClass} text-neutral-400`}>قیمت تحویل به‌صورت کد مستقیم</span>
+      <div className="flex items-center gap-2.5 whitespace-nowrap" dir="rtl">
+        {!compact && <span className={`${labelSizeClass} text-brand-white`}>کد مستقیم:</span>}
         {derivedRegularPrice && (
-          <span className={`${strikeSizeClass} text-neutral-500 line-through decoration-red-500/70`}>
+          <span className={`${strikeSizeClass} text-brand-surface_m line-through decoration-brand-surface_m/80`}>
             {formatPrice(derivedRegularPrice)}
           </span>
         )}
-        <span className={`${priceSizeClass} ${derivedRegularPrice ? 'text-brand-sabz' : 'text-white'}`}>
-          {isCodeDisabled ? 'غیرفعال' : formatPrice(codePrice as number)}
+        <span className={`${priceSizeClass} ${isCodeDisabled ? "text-red-500" : derivedRegularPrice ? "text-brand-sabz" : "text-brand-white"}`}>
+          {isCodeDisabled ? "غیرفعال" : formatPrice(codePrice as number)}
         </span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1 items-center">
+    <div className="flex items-center gap-2.5 whitespace-nowrap" dir="rtl">
       {hasDiscount && (
-        <span className={`${strikeSizeClass} text-neutral-500 line-through decoration-red-500/70`}>
-          {formatPrice(regularPrice ?? null)}
+        <span className={`${strikeSizeClass} text-brand-surface_m line-through decoration-brand-surface_m/80`}>
+          {formatPrice(regularPrice)}
         </span>
       )}
-      <div className="flex items-center gap-2">
-        <span className={`${priceSizeClass} text-brand-sabz`}>
-          {formatPrice(price)}
-        </span>
-      </div>
+      <span className={`${priceSizeClass} ${hasDiscount ? "text-brand-sabz" : "text-brand-white"}`}>
+        {formatPrice(price)}
+      </span>
     </div>
   );
 };
