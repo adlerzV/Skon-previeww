@@ -16,37 +16,46 @@ interface Props {
   banners: Banner[];
 }
 
+const AUTOPLAY_MS = 5000;
+const MOUNT_REST_AFTER_MS = 1500;
+
 export default function CategoryHero({ banners }: Props) {
+  const total = banners?.length ?? 0;
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [mountedCount, setMountedCount] = useState(1);
 
   const handleNext = useCallback(() => {
-    setActiveIndex((prev) => (prev + 1) % banners.length);
-  }, [banners.length]);
+    setActiveIndex((prev) => (prev + 1) % total);
+  }, [total]);
 
   const handlePrev = useCallback(() => {
-    setActiveIndex((prev) => (prev - 1 + banners.length) % banners.length);
-  }, [banners.length]);
+    setActiveIndex((prev) => (prev - 1 + total) % total);
+  }, [total]);
 
   useEffect(() => {
-    if (banners.length <= 1 || !isPlaying) return;
+    if (total <= 1) return;
+    const timer = window.setTimeout(() => setMountedCount(total), MOUNT_REST_AFTER_MS);
+    return () => window.clearTimeout(timer);
+  }, [total]);
 
-    const interval = setInterval(() => {
-      handleNext();
-    }, 5000);
-
+  useEffect(() => {
+    if (total <= 1 || !isPlaying) return;
+    const interval = setInterval(handleNext, AUTOPLAY_MS);
     return () => clearInterval(interval);
-  }, [isPlaying, banners.length, handleNext]);
+  }, [isPlaying, total, handleNext]);
 
-  if (!banners || banners.length === 0) return null;
+  if (!banners || total === 0) return null;
 
   const currentBanner = banners[activeIndex];
+  const renderCount = Math.max(mountedCount, activeIndex + 1);
 
   return (
     <div dir="rtl" className="w-full max-w-[1600px] mx-auto font-sans group md:px-0">
       <section className="relative w-full h-[350px] md:h-[350px] mt-1 bg-brand-bg overflow-hidden ">
         <div className="absolute inset-0 bg-[#111215]">
-          {banners.map((banner, index) => (
+          {banners.slice(0, renderCount).map((banner, index) => (
             <div
               key={index}
               className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
@@ -58,6 +67,8 @@ export default function CategoryHero({ banners }: Props) {
                 alt={banner.subtitle}
                 fill
                 priority={index === 0}
+                loading={index === 0 ? "eager" : "lazy"}
+                quality={80}
                 sizes="(max-width: 1600px) 100vw, 1600px"
                 className="object-cover object-center"
               />
@@ -75,8 +86,9 @@ export default function CategoryHero({ banners }: Props) {
                 alt="Banner Logo"
                 fill
                 sizes="(max-width: 768px) 192px, 256px"
+                quality={75}
+                loading="eager"
                 className="object-contain object-right"
-                priority
               />
             </div>
           )}
@@ -88,7 +100,7 @@ export default function CategoryHero({ banners }: Props) {
           </div>
         </div>
 
-        {banners.length > 1 && (
+        {total > 1 && (
           <>
             <Button
               variant="icon"
@@ -111,7 +123,7 @@ export default function CategoryHero({ banners }: Props) {
         )}
       </section>
 
-      {banners.length > 1 && (
+      {total > 1 && (
         <div className="flex items-center justify-center gap-4 mt-3">
           <Button variant="ghost" onClick={() => setIsPlaying(!isPlaying)} aria-label={isPlaying ? "توقف اسلایدر" : "پخش اسلایدر"}>
             {isPlaying ? <Pause size={18} fill="currentColor" stroke="none" /> : <Play size={18} fill="currentColor" stroke="none" />}

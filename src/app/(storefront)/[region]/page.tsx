@@ -1,21 +1,20 @@
 import { Suspense } from "react";
-import HomeHero from "@/components/home/HomeHero";
+import { getHomeHeroData } from "@/lib/graphql";
+import CategoryHero from "@/components/Hero";
 import HomeFeaturedGrid from "@/components/home/HomeFeaturedGrid";
 import HomeLatestGrid from "@/components/home/HomeLatestGrid";
-import { HeroSkeleton, ProductGridSkeleton } from "@/components/home/HomeSkeletons";
+import { ProductGridSkeleton } from "@/components/home/HomeSkeletons";
 
 interface HomeProps {
   params: Promise<{ region: string }>;
 }
 
 export default async function Home({ params }: HomeProps) {
-  const { region } = await params;
+  const [{ region }, { banners }] = await Promise.all([params, getHomeHeroData()]);
 
   return (
     <main className="container mx-auto px-6 max-w-site pb-12">
-      <Suspense fallback={<HeroSkeleton />}>
-        <HomeHero />
-      </Suspense>
+      <CategoryHero banners={banners} />
 
       <Suspense fallback={<ProductGridSkeleton />}>
         <HomeFeaturedGrid region={region} />

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getProductDetail } from "@/lib/graphql";
+import type { ProductNode, VariationCard } from "@/lib/graphql";
 import ProductPageClient from "@/components/product/ProductPageClient";
 import ProductContentMatrix from "@/components/product/ProductContentMatrix";
 import ProductDescriptionSections from "@/components/product/ProductDescriptionSections";
@@ -12,9 +13,25 @@ interface ProductPageProps {
   searchParams: Promise<{ edition?: string }>;
 }
 
+function toClientVariations(cards: VariationCard[] | undefined): VariationCard[] {
+  if (!cards?.length) return [];
+
+  return cards.map((v) => ({
+    databaseId: v.databaseId,
+    imageUrl: v.imageUrl,
+    attributes: v.attributes,
+    codeStockCount: v.codeStockCount,
+    parsedPrice: v.parsedPrice,
+    parsedRegularPrice: v.parsedRegularPrice,
+    parsedGiftPrice: v.parsedGiftPrice,
+    parsedGiftRegularPrice: v.parsedGiftRegularPrice,
+    parsedCodePrice: v.parsedCodePrice,
+    parsedCodeRegularPrice: v.parsedCodeRegularPrice,
+  })) as unknown as VariationCard[];
+}
+
 export default async function ProductDetailPage({ params, searchParams }: ProductPageProps) {
-  const { region, productSlug } = await params;
-  const { edition } = await searchParams;
+  const [{ region, productSlug }, { edition }] = await Promise.all([params, searchParams]);
 
   const product = await getProductDetail(productSlug, region);
 
@@ -22,17 +39,26 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
 
   const { secondaryGallery, description, reviewCount, averageRating, contentMatrix } = product;
 
+  const clientProduct = {
+    id: product.id,
+    databaseId: product.databaseId,
+    name: product.name,
+    slug: product.slug,
+    shortNotify: product.shortNotify,
+    shortDescription: product.shortDescription,
+    image: product.image,
+    imageLarge: product.imageLarge,
+    galleryImages: product.galleryImages,
+    parsedPrice: product.parsedPrice,
+    parsedRegularPrice: product.parsedRegularPrice,
+    isVariation: product.isVariation,
+    variationCards: toClientVariations(product.variationCards),
+  } as ProductNode;
+
   return (
     <main className="container mx-auto px-6 max-w-site py-8">
       <ProductPageClient
-        product={{
-          ...product,
-          secondaryGallery: undefined,
-          description: undefined,
-          reviewCount: undefined,
-          averageRating: undefined,
-          contentMatrix: undefined,
-        }}
+        product={clientProduct}
         initialEdition={edition}
         activeRegion={region}
         wishlistSlot={
@@ -41,13 +67,19 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
           </Suspense>
         }
       >
-        <ProductContentMatrix contentMatrix={contentMatrix} />
-        <ProductDescriptionSections secondaryGallery={secondaryGallery} description={description} />
-        <ProductReviewsSection
-          productId={product.databaseId}
-          averageRating={averageRating ?? 0}
-          reviewCount={reviewCount}
-        />
+        <div className="cv-auto">
+          <ProductContentMatrix contentMatrix={contentMatrix} />
+        </div>
+        <div className="cv-auto">
+          <ProductDescriptionSections secondaryGallery={secondaryGallery} description={description} />
+        </div>
+        <div className="cv-auto">
+          <ProductReviewsSection
+            productId={product.databaseId}
+            averageRating={averageRating ?? 0}
+            reviewCount={reviewCount}
+          />
+        </div>
       </ProductPageClient>
     </main>
   );

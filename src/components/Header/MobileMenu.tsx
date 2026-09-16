@@ -160,6 +160,7 @@ export default function MobileMenu({ activeRegion, regionsPromise, drawerDataPro
   const buildHref = (link: string) => buildRegionHref(currentRegion, link);
 
   const [isOpen, setIsOpen] = useState(false);
+  const [hasOpened, setHasOpened] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
 
@@ -206,7 +207,7 @@ export default function MobileMenu({ activeRegion, regionsPromise, drawerDataPro
     >
       <div className="flex items-center justify-between w-full h-full">
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => { setHasOpened(true); setIsOpen(true); }}
           className="flex items-center justify-center w-10 h-10 text-brand-m_khonsa hover:text-white transition-colors"
           aria-label="باز کردن منو"
           aria-expanded={isOpen}
@@ -347,78 +348,84 @@ export default function MobileMenu({ activeRegion, regionsPromise, drawerDataPro
         aria-modal="true"
         aria-label="منوی ناوبری"
       >
-        <div className="flex items-center justify-between h-[60px] px-5 border-b border-brand-surface shrink-0">
-          <span className="text-white font-bold text-base">منوی سایت</span>
-          <button
-            onClick={closeMenu}
-            className="text-brand-m_khonsa hover:text-white transition-colors"
-            aria-label="بستن منو"
-          >
-            <X size={22} strokeWidth={2.5} />
-          </button>
-        </div>
-
-        <Suspense fallback={<DrawerUserRowSkeleton />}>
-          <DrawerUserRow dataPromise={drawerDataPromise} onNavigate={closeMenu} />
-        </Suspense>
-
-        <div className="flex-1 overflow-y-auto flex flex-col">
-          <nav className="flex flex-col text-right w-full">
-            <Link
-              href={`/${currentRegion}`}
-              onClick={closeMenu}
-              className={`p-4 text-sm font-bold border-b border-brand-surface transition-colors ${
-                !isBlogSection
-                  ? "text-brand-blue bg-brand-surface/20"
-                  : "text-brand-white hover:bg-brand-surface/30"
-              }`}
-            >
-              فروشگاه
-            </Link>
-            <Link
-              href={`/${currentRegion}/blog`}
-              onClick={closeMenu}
-              className={`p-4 text-sm font-bold border-b border-brand-surface transition-colors ${
-                isBlogSection
-                  ? "text-brand-blue bg-brand-surface/20"
-                  : "text-brand-white hover:bg-brand-surface/30"
-              }`}
-            >
-              بلاگ اخبار
-            </Link>
-
-            <div className="flex flex-col w-full">
+        {hasOpened && (
+          <>
+            <div className="flex items-center justify-between h-[60px] px-5 border-b border-brand-surface shrink-0">
+              <span className="text-white font-bold text-base">منوی سایت</span>
               <button
-                onClick={() => setShopOpen((prev) => !prev)}
-                className="flex items-center justify-between p-4 text-sm font-bold text-brand-white hover:bg-brand-surface/30 transition-colors border-b border-brand-surface bg-transparent outline-none"
-                aria-expanded={shopOpen}
+                onClick={closeMenu}
+                className="text-brand-m_khonsa hover:text-white transition-colors"
+                aria-label="بستن منو"
               >
-                {isBlogSection ? "دسته‌بندی‌های اخبار" : "بازی‌ها"}
-                <ChevronDown
-                  size={14}
-                  strokeWidth={3}
-                  className={`transition-transform duration-200 ${shopOpen ? "rotate-180" : ""}`}
-                />
+                <X size={22} strokeWidth={2.5} />
               </button>
-              <div
-                className={`grid grid-cols-4 gap-2 bg-[#111215] border-t border-[#23252b] transition-all overflow-hidden ${
-                  shopOpen ? "max-h-[500px] p-2.5 opacity-100" : "max-h-0 p-0 opacity-0"
-                }`}
-              >
-                <Suspense fallback={<DrawerGamesGridSkeleton />}>
-                  <DrawerGamesGrid
-                    dataPromise={drawerDataPromise}
-                    isBlogSection={isBlogSection}
-                    buildHref={buildHref}
-                    onNavigate={closeMenu}
-                    onPrefetch={(href) => router.prefetch(href)}
-                  />
-                </Suspense>
-              </div>
             </div>
-            <div className="border-t border-[#23252b]" />
-          </nav>
-        </div>
+
+            <Suspense fallback={<DrawerUserRowSkeleton />}>
+              <DrawerUserRow dataPromise={drawerDataPromise} onNavigate={closeMenu} />
+            </Suspense>
+
+            <div className="flex-1 overflow-y-auto flex flex-col">
+              <nav className="flex flex-col text-right w-full">
+                <Link
+                  href={`/${currentRegion}`}
+                  onClick={closeMenu}
+                  className={`p-4 text-sm font-bold border-b border-brand-surface transition-colors ${
+                    !isBlogSection
+                      ? "text-brand-blue bg-brand-surface/20"
+                      : "text-brand-white hover:bg-brand-surface/30"
+                  }`}
+                >
+                  فروشگاه
+                </Link>
+                <Link
+                  href={`/${currentRegion}/blog`}
+                  onClick={closeMenu}
+                  className={`p-4 text-sm font-bold border-b border-brand-surface transition-colors ${
+                    isBlogSection
+                      ? "text-brand-blue bg-brand-surface/20"
+                      : "text-brand-white hover:bg-brand-surface/30"
+                  }`}
+                >
+                  بلاگ اخبار
+                </Link>
+
+                <div className="flex flex-col w-full">
+                  <button
+                    onClick={() => setShopOpen((prev) => !prev)}
+                    className="flex items-center justify-between p-4 text-sm font-bold text-brand-white hover:bg-brand-surface/30 transition-colors border-b border-brand-surface bg-transparent outline-none"
+                    aria-expanded={shopOpen}
+                  >
+                    {isBlogSection ? "دسته‌بندی‌های اخبار" : "بازی‌ها"}
+                    <ChevronDown
+                      size={14}
+                      strokeWidth={3}
+                      className={`transition-transform duration-200 ${shopOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  <div
+                    className={`grid grid-cols-4 gap-2 bg-[#111215] border-t border-[#23252b] transition-all overflow-hidden ${
+                      shopOpen ? "max-h-[500px] p-2.5 opacity-100" : "max-h-0 p-0 opacity-0"
+                    }`}
+                  >
+                    {shopOpen && (
+                      <Suspense fallback={<DrawerGamesGridSkeleton />}>
+                        <DrawerGamesGrid
+                          dataPromise={drawerDataPromise}
+                          isBlogSection={isBlogSection}
+                          buildHref={buildHref}
+                          onNavigate={closeMenu}
+                          onPrefetch={(href) => router.prefetch(href)}
+                        />
+                      </Suspense>
+                    )}
+                  </div>
+                </div>
+                <div className="border-t border-[#23252b]" />
+              </nav>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

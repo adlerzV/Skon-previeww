@@ -425,7 +425,7 @@ export default function ProductPageClient({
   );
 
   return (
-    <div className="flex flex-col gap-12 w-full min-h-screen" dir="rtl">
+    <div className="flex flex-col gap-12 w-full" dir="rtl">
       <ProductStickyBar
         visible={showStickyBar}
         productName={product.name}
@@ -480,9 +480,10 @@ export default function ProductPageClient({
                 alt={product.name}
                 fill
                 priority
-                quality={90}
+                fetchPriority="high"
+                quality={80}
                 className="object-cover transition-opacity duration-300"
-                sizes="(max-width: 1024px) 100vw, 70vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 92vw, 58vw"
               />
               {allGalleryImages.length > 1 && (
                 <>
@@ -520,8 +521,9 @@ export default function ProductPageClient({
                         src={imgUrl}
                         alt={`گالری ${idx + 1}`}
                         fill
-                        sizes="100px"
-                        quality={75}
+                        loading="lazy"
+                        sizes="(max-width: 640px) 86px, 108px"
+                        quality={60}
                         className="object-cover"
                       />
                     </button>

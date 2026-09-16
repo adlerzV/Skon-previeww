@@ -1,19 +1,18 @@
 import { getHeaderCategories, getHeaderBlogCategories, getRegions } from "@/lib/graphql";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getHeaderViewerData } from "@/lib/auth/session";
 import MobileMenu, { type MobileMenuDrawerData } from "./MobileMenu";
 
 export default function MobileMenuAsync({ activeRegion }: { activeRegion: string }) {
-
   const regionsPromise = getRegions().catch(() => []);
 
   const drawerDataPromise: Promise<MobileMenuDrawerData> = Promise.all([
     getHeaderCategories(),
     getHeaderBlogCategories(),
-    getCurrentUser().catch(() => null),
-  ]).then(([shopItems, blogItems, user]) => ({
+    getHeaderViewerData().catch(() => ({ user: null })),
+  ]).then(([shopItems, blogItems, viewer]) => ({
     shopItems,
     blogItems,
-    user: user ? { name: user.name, avatarUrl: user.avatarUrl } : null,
+    user: viewer.user ? { name: viewer.user.name, avatarUrl: viewer.user.avatarUrl } : null,
   }));
 
   return (

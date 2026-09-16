@@ -140,7 +140,7 @@ export async function getProductsByIds(ids: number[], activeRegion: string = "eu
   );
 }
 
-export async function getCategoryArchive(slug: string, activeRegion: string = "eu") {
+export async function getCategoryShell(slug: string) {
   if (!slug) return null;
 
   const categoryTag = buildSlugTag("category", slug);
@@ -148,58 +148,72 @@ export async function getCategoryArchive(slug: string, activeRegion: string = "e
 
   const cached = unstable_cache(
     async () => {
-      const [categoryData, bannersData] = await Promise.all([
-        fetchGraphQL(
-          `
-            ${CATEGORY_BASIC_FIELDS}
-            ${PRODUCT_CARD_FIELDS}
-            query GetCategoryProducts($id: ID!, $categoryIn: [String], $regionSlug: String) {
-              productCategory(id: $id, idType: SLUG) {
-                ...CategoryBasicFields
-                children(where: { hideEmpty: true }) {
-                  nodes { id databaseId name slug }
-                }
+      const data = await fetchGraphQL(
+        `
+          ${CATEGORY_BASIC_FIELDS}
+          ${BANNER_FIELDS}
+          query GetCategoryShell($id: ID!) {
+            productCategory(id: $id, idType: SLUG) {
+              ...CategoryBasicFields
+              children(where: { hideEmpty: true }) {
+                nodes { id databaseId name slug }
               }
-              products(first: 100, where: { categoryIn: $categoryIn, status: "PUBLISH", regionSlug: $regionSlug }) {
-                nodes { ...ProductCardFields }
-              }
+              banners { ...BannerFields }
             }
-          `,
-          { id: slug, categoryIn: [slug], regionSlug: activeRegion },
-          ["products", categoryTag]
-        ),
-        fetchGraphQL(
-          `
-            ${BANNER_FIELDS}
-            query GetCategoryBanners($id: ID!) {
-              productCategory(id: $id, idType: SLUG) {
-                banners { ...BannerFields }
-              }
-            }
-          `,
-          { id: slug },
-          ["banners", bannersTag]
-        ),
-      ]);
+          }
+        `,
+        { id: slug },
+        ["banners", bannersTag, "header-data"]
+      );
 
-      if (categoryData === null) {
+      if (data === null) {
         throw new Error(`دریافت اطلاعات دسته‌بندی «${slug}» با خطا مواجه شد`);
       }
 
-      if (!categoryData?.productCategory) return null;
+      if (!data?.productCategory) return null;
 
       return {
-        ...categoryData.productCategory,
-        banners: safeBannerUrls(bannersData?.productCategory?.banners ?? []),
-        products: {
-          nodes: formatProducts(categoryData.products?.nodes ?? [], true, activeRegion).filter(
-            (p) => p.isAvailableInRegion !== false
-          ),
-        },
+        ...data.productCategory,
+        banners: safeBannerUrls(data.productCategory.banners ?? []),
       };
     },
-    ["category-archive", slug, activeRegion],
-    { tags: ["products", categoryTag, "banners", bannersTag], revalidate: false }
+    ["category-shell", slug],
+    { tags: ["banners", bannersTag, "header-data", categoryTag], revalidate: false }
+  );
+
+  return cached();
+}
+
+export async function getCategoryProducts(slug: string, activeRegion: string = "eu") {
+  if (!slug) return [] as ProductNode[];
+
+  const categoryTag = buildSlugTag("category", slug);
+
+  const cached = unstable_cache(
+    async () => {
+      const data = await fetchGraphQL(
+        `
+          ${PRODUCT_CARD_FIELDS}
+          query GetCategoryProducts($categoryIn: [String], $regionSlug: String) {
+            products(first: 100, where: { categoryIn: $categoryIn, status: "PUBLISH", regionSlug: $regionSlug }) {
+              nodes { ...ProductCardFields }
+            }
+          }
+        `,
+        { categoryIn: [slug], regionSlug: activeRegion },
+        ["products", categoryTag]
+      );
+
+      if (data === null) {
+        throw new Error(`دریافت محصولات دسته‌بندی «${slug}» با خطا مواجه شد`);
+      }
+
+      return formatProducts(data.products?.nodes ?? [], true, activeRegion).filter(
+        (p) => p.isAvailableInRegion !== false
+      );
+    },
+    ["category-products", slug, activeRegion],
+    { tags: ["products", categoryTag], revalidate: false }
   );
 
   return cached();

@@ -30,12 +30,7 @@ export default function DesktopGamesNav({ games }: DesktopGamesNavProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [visibleCount, setVisibleCount] = useState(games?.length ?? 0);
-  const [isMounted, setIsMounted] = useState(false);
   const { region: currentRegion, pathnameWithoutRegion } = useActiveRegion();
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const calculateItems = useCallback(
     (width: number): number => {
@@ -80,7 +75,7 @@ export default function DesktopGamesNav({ games }: DesktopGamesNavProps) {
     [games, visibleCount]
   );
 
-  if (!isMounted || !games?.length) {
+  if (!games?.length) {
     return (
       <div className="flex items-center gap-2 h-full px-2 w-[240px]">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -100,31 +95,31 @@ export default function DesktopGamesNav({ games }: DesktopGamesNavProps) {
     return current === clean || current.startsWith(`${clean}/`);
   }
 
-  function GameIcon({
-    game,
-    size = 36,
-    active,
-  }: {
-    game: HeaderGameItem;
-    size?: number;
-    active: boolean;
-  }) {
-    return (
-      <div
-        className={`relative flex-shrink-0 transition-transform duration-300 group-hover:scale-110`}
-        style={{ width: size, height: size }}
-      >
-        <Image
-          src={game.img}
-          alt={game.title || "game"}
-          fill
-          sizes={`${size}px`}
-          quality={80}
-          className={`object-contain ${active ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" : ""}`}
-        />
-      </div>
-    );
-  }
+function GameIcon({
+  game,
+  size = 36,
+  active,
+}: {
+  game: HeaderGameItem;
+  size?: number;
+  active: boolean;
+}) {
+  return (
+    <div
+      className="relative flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+      style={{ width: size, height: size }}
+    >
+      <Image
+        src={game.img}
+        alt={game.title || "game"}
+        fill
+        sizes={`${size}px`}
+        quality={70}
+        className={`object-contain ${active ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" : ""}`}
+      />
+    </div>
+  );
+}
 
   return (
     <div

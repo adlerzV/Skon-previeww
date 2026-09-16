@@ -41,6 +41,7 @@ export default function ProductCard({ product, activeRegion, variant = "price", 
   return (
     <Link
       href={href}
+      prefetch={false}
       className="group flex flex-col bg-brand-surface duration-200 hover:bg-brand-surface_hover overflow-hidden relative h-full min-h-[300px] md:min-h-[380px]"
     >
       {variant === "price" && badges.length > 0 && (

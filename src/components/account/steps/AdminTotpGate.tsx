@@ -3,7 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Loader2, ShieldCheck, Copy, Check, MessageSquareText, KeyRound } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import dynamic from "next/dynamic";
+
+const QRCodeSVG = dynamic(
+  () => import("qrcode.react").then((m) => m.QRCodeSVG),
+  {
+    ssr: false,
+    loading: () => <div className="w-[160px] h-[160px] bg-white/10 animate-pulse" />,
+  }
+);
 
 type AuthMethod = "totp" | "sms";
 

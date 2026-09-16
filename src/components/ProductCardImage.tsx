@@ -1,24 +1,17 @@
-"use client";
-
-import { useState } from "react";
 import Image from "next/image";
 
-export default function ProductCardImage({ src, alt }: { src: string; alt: string }) {
-  const [loaded, setLoaded] = useState(false);
+const GRID_SIZES =
+  "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw";
 
+export default function ProductCardImage({ src, alt }: { src: string; alt: string }) {
   return (
-    <>
-      {!loaded && <div className="absolute inset-0 skeleton-shimmer animate-pulse bg-white/5" />}
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        onLoad={() => setLoaded(true)}
-        className={`object-cover transition-opacity duration-300 ease-in-out brightness-[0.99] group-hover:brightness-110 ${
-          loaded ? "opacity-100" : "opacity-0"
-        }`}
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-      />
-    </>
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      sizes={GRID_SIZES}
+      quality={70}
+      className="object-cover brightness-[0.99] group-hover:brightness-110 transition-[filter] duration-200"
+    />
   );
 }

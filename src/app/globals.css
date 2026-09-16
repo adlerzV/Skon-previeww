@@ -10,7 +10,7 @@
 
   html {
     scroll-behavior: smooth;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -22,9 +22,8 @@
   body {
     background-color: #15171e;
     color: #c2c2c4;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
-
   * {
     border-radius: 5px;
     border-color: #313339;
@@ -157,6 +156,19 @@
     100% {
       transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0.4);
       opacity: 0;
+    }
+  }
+    .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 720px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer::after {
+      animation: none;
+    }
+    .animate-pulse {
+      animation: none;
     }
   }
 }

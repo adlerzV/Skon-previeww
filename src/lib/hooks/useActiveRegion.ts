@@ -17,26 +17,30 @@ function regionFromPathname(pathname: string | null) {
   };
 }
 
+function readRegionCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)store_region=([^;]+)/);
+  const value = match?.[1];
+  return value && KNOWN_REGIONS.includes(value.toLowerCase()) ? value : null;
+}
+
 export function useActiveRegion() {
   const pathname = usePathname();
+  const parsed = useMemo(() => regionFromPathname(pathname), [pathname]);
   const [cookieRegion, setCookieRegion] = useState<string | null>(null);
 
   useEffect(() => {
-    const match = document.cookie.match(/(?:^|;\s*)store_region=([^;]+)/);
-    const value = match?.[1];
-    if (value && KNOWN_REGIONS.includes(value.toLowerCase())) {
-      setCookieRegion(value);
-    }
-  }, [pathname]);
+    if (parsed.hasRegion) return;
+    setCookieRegion((prev) => prev ?? readRegionCookie());
+  }, [parsed.hasRegion]);
 
   return useMemo(() => {
-    const { region: pathRegion, hasRegion, pathnameWithoutRegion } = regionFromPathname(pathname);
-    const region = pathRegion ?? cookieRegion ?? DEFAULT_REGION;
+    const region = parsed.region ?? cookieRegion ?? DEFAULT_REGION;
     return {
       region,
-      pathnameWithoutRegion: hasRegion ? pathnameWithoutRegion : (pathname ?? ""),
+      pathnameWithoutRegion: parsed.hasRegion ? parsed.pathnameWithoutRegion : (pathname ?? ""),
     };
-  }, [pathname, cookieRegion]);
+  }, [parsed, cookieRegion, pathname]);
 }
 
 export function buildRegionHref(region: string, link: string): string {
