@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getProductDetail } from "@/lib/graphql";
 import ProductPageClient from "@/components/product/ProductPageClient";
+import ProductContentMatrix from "@/components/product/ProductContentMatrix";
 import ProductDescriptionSections from "@/components/product/ProductDescriptionSections";
 import ProductReviewsSection from "@/components/ProductReviewsSection";
 import WishlistButtonAsync, { WishlistButtonSkeleton } from "@/components/product/WishlistButtonAsync";
@@ -19,7 +20,7 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
 
   if (!product) notFound();
 
-  const { secondaryGallery, description, reviewCount, averageRating } = product;
+  const { secondaryGallery, description, reviewCount, averageRating, contentMatrix } = product;
 
   return (
     <main className="container mx-auto px-6 max-w-site py-8">
@@ -30,6 +31,7 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
           description: undefined,
           reviewCount: undefined,
           averageRating: undefined,
+          contentMatrix: undefined,
         }}
         initialEdition={edition}
         activeRegion={region}
@@ -39,6 +41,7 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
           </Suspense>
         }
       >
+        <ProductContentMatrix contentMatrix={contentMatrix} />
         <ProductDescriptionSections secondaryGallery={secondaryGallery} description={description} />
         <ProductReviewsSection
           productId={product.databaseId}

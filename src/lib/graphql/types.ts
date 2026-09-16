@@ -21,6 +21,22 @@ export interface VariationCard {
   regionSlug?: string;
 }
 
+export interface ContentMatrixColumn {
+  key: string;
+  label: string;
+}
+
+export interface ContentMatrixItem {
+  name: string;
+  includedIn: string[];
+}
+
+export interface ContentMatrix {
+  columns: ContentMatrixColumn[];
+  items: ContentMatrixItem[];
+  image?: string | null;
+}
+
 export interface ProductNode {
   id: string;
   databaseId: number;
@@ -47,6 +63,7 @@ export interface ProductNode {
   activeRegion?: string;
   averageRating?: number;
   reviewCount?: number;
+  contentMatrix?: ContentMatrix | null;
   reviews?: {
     pageInfo?: { hasNextPage: boolean; endCursor: string | null };
     nodes: Array<{
