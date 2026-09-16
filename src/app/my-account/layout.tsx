@@ -1,19 +1,22 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { cookies } from "next/headers";
 import { ChevronRight } from "lucide-react";
 import DashboardShell from "@/components/account/DashboardShell";
 import MobileBottomNav from "@/components/Header/MobileBottomNav";
 import AccountLayoutSkeleton from "@/components/account/AccountLayoutSkeleton";
+import LoginPageSkeleton from "@/components/account/LoginPageSkeleton";
 import { getCurrentUser } from "@/lib/auth/session";
+import { LOGGED_IN_COOKIE } from "@/lib/auth/constants";
 
 async function AccountLayoutContent({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
 
   if (!user) {
     return (
-      <div className="min-h-screen w-full bg-brand-bg flex flex-col" dir="rtl">
-        <header className="w-full flex items-center justify-between px-5 py-4 md:px-8">
+      <div className="h-[100dvh] w-full bg-brand-bg flex flex-col overflow-hidden" dir="rtl">
+        <header className="w-full flex items-center justify-between px-5 py-4 md:px-8 shrink-0">
           <Link href="/" aria-label="صفحه اصلی">
             <Image
               src="/images/arena2battleLogo.webp"
@@ -34,7 +37,7 @@ async function AccountLayoutContent({ children }: { children: React.ReactNode })
           </Link>
         </header>
 
-        <main className="flex-1 w-full flex items-center justify-center p-5 pb-[calc(58px+env(safe-area-inset-bottom)+20px)] lg:pb-5">
+        <main className="flex-1 min-h-0 w-full flex items-center justify-center p-4 md:p-5 overflow-y-auto pb-[calc(58px+env(safe-area-inset-bottom)+12px)] lg:pb-4">
           {children}
         </main>
 
@@ -50,9 +53,12 @@ async function AccountLayoutContent({ children }: { children: React.ReactNode })
   );
 }
 
-export default function AccountLayout({ children }: { children: React.ReactNode }) {
+export default async function AccountLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const likelyLoggedIn = cookieStore.get(LOGGED_IN_COOKIE)?.value === "1";
+
   return (
-    <Suspense fallback={<AccountLayoutSkeleton />}>
+    <Suspense fallback={likelyLoggedIn ? <AccountLayoutSkeleton /> : <LoginPageSkeleton />}>
       <AccountLayoutContent>{children}</AccountLayoutContent>
     </Suspense>
   );

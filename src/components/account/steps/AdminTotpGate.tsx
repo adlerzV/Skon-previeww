@@ -253,6 +253,8 @@ export default function AdminTotpGate({
   }
 
   if (method === "sms") {
+    const isSmsCodeReady = toEnglishDigits(smsCode).length >= 5;
+
     return (
       <div className="flex flex-col gap-4">
         <div className="text-center flex flex-col gap-1">
@@ -311,7 +313,7 @@ export default function AdminTotpGate({
             />
             <button
               type="submit"
-              disabled={isVerifyingSms || !smsCodeSent}
+              disabled={isVerifyingSms || !smsCodeSent || !isSmsCodeReady}
               className="bg-brand-blue hover:bg-[#0062d1] disabled:opacity-60 text-white font-bold py-3 flex items-center justify-center gap-2 transition-colors"
             >
               {isVerifyingSms && <Loader2 size={16} className="animate-spin" />}
@@ -401,7 +403,7 @@ export default function AdminTotpGate({
 
       <button
         type="submit"
-        disabled={isVerifying}
+        disabled={isVerifying || code.length !== 6}
         className="bg-brand-blue hover:bg-[#0062d1] disabled:opacity-60 text-white font-bold py-3 flex items-center justify-center gap-2 transition-colors"
       >
         {isVerifying && <Loader2 size={16} className="animate-spin" />}

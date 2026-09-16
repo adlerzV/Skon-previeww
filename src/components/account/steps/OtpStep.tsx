@@ -23,6 +23,8 @@ export default function OtpStep({ phone, initialCooldown, onBack, onNeedsProfile
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const isCodeComplete = code.trim().length === OTP_LENGTH;
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -137,7 +139,7 @@ export default function OtpStep({ phone, initialCooldown, onBack, onNeedsProfile
 
       <button
         type="submit"
-        disabled={isVerifying}
+        disabled={isVerifying || !isCodeComplete}
         className="bg-brand-blue hover:bg-[#0062d1] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-3 flex items-center justify-center gap-2 transition-colors"
       >
         {isVerifying && <Loader2 size={16} className="animate-spin" />}
