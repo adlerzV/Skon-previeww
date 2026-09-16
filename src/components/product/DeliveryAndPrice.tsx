@@ -259,41 +259,29 @@ export default function DeliveryAndPrice({
   const isCodeDisabled =
     selectedVariation.parsedCodePrice == null ||
     selectedVariation.parsedCodePrice === "disabled" ||
-    (typeof selectedVariation.codeStockCount === "number" &&
-      selectedVariation.codeStockCount <= 0);
+    (typeof selectedVariation.codeStockCount === "number" && selectedVariation.codeStockCount <= 0);
 
   const currentPrice = deliveryType ? getPrice(selectedVariation, deliveryType) : null;
   const regularPrice = deliveryType ? getRegularPrice(selectedVariation, deliveryType) : null;
 
   const isFormValid = (): boolean => {
     if (!deliveryType) return false;
-    if (deliveryType === "direct") {
-      return EMAIL_REGEX.test(email.trim()) && password.trim().length > 0;
-    }
-    if (deliveryType === "gift") {
-      return BATTLETAG_REGEX.test(battleTag.trim());
-    }
+    if (deliveryType === "direct") return EMAIL_REGEX.test(email.trim()) && password.trim().length > 0;
+    if (deliveryType === "gift") return BATTLETAG_REGEX.test(battleTag.trim());
     if (deliveryType === "code") return true;
     return false;
   };
 
-  const handleAddToCart = () => {
+const handleAddToCart = () => {
     if (!isFormValid() || !deliveryType || !selectedVariation) return;
     setIsAddingToCart(true);
-
     const regionValue = regionInfo ? selectedAttrs[regionInfo.name] : undefined;
-
     const traitValues = groupedAttributes
       .map((g) => selectedAttrs[g.name])
       .filter(Boolean);
-
-    const variationNameValue =
-      traitValues.length > 0 ? traitValues.join(" - ") : undefined;
-
+    const variationNameValue = traitValues.length > 0 ? traitValues.join(" - ") : undefined;
     const variationIdValue =
-      selectedVariation.databaseId !== productId
-        ? selectedVariation.databaseId
-        : undefined;
+      selectedVariation.databaseId !== productId ? selectedVariation.databaseId : undefined;
 
     const added = addToCart({
       productId,
@@ -305,8 +293,7 @@ export default function DeliveryAndPrice({
       region: regionValue,
       variationName: variationNameValue,
       maxQuantity:
-        deliveryType === "code" &&
-        typeof selectedVariation.codeStockCount === "number"
+        deliveryType === "code" && typeof selectedVariation.codeStockCount === "number"
           ? selectedVariation.codeStockCount
           : undefined,
       customFields:
@@ -321,7 +308,6 @@ export default function DeliveryAndPrice({
       showToast("به سبد خرید اضافه شد 🛒");
       setBurstKey((k) => k + 1);
     }
-
     setTimeout(() => setIsAddingToCart(false), 1000);
   };
 
@@ -377,7 +363,6 @@ export default function DeliveryAndPrice({
         <span className="text-brand-surface_m text-[13px] font-bold uppercase tracking-wide">
           مسیر تحویل محصول:
         </span>
-
         <div className="grid grid-cols-3 gap-2">
           {deliveryButtons.map(({ type, disabled, activeColor, label, tooltip, icon }) => (
             <div key={type} className="relative group flex flex-col">
@@ -396,16 +381,13 @@ export default function DeliveryAndPrice({
                 {icon}
                 <span className="font-bold text-xs">{label}</span>
               </button>
-
               <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-48 bg-brand-menu border border-brand-surface_hover p-3 text-center opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 shadow-xl pointer-events-none">
                 <span className={`block text-[13px] font-bold mb-1 ${tooltip.titleColor}`}>
                   {tooltip.title}
                 </span>
-
                 <span className="text-[11px] text-brand-m_khonsa leading-relaxed">
                   {tooltip.body}
                 </span>
-
                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-brand-surface_hover" />
               </div>
             </div>
@@ -423,43 +405,27 @@ export default function DeliveryAndPrice({
               onPasswordChange={setPassword}
             />
           )}
-
           {deliveryType === "gift" && (
-            <GiftForm
-              battleTag={battleTag}
-              onBattleTagChange={setBattleTag}
-            />
+            <GiftForm battleTag={battleTag} onBattleTagChange={setBattleTag} />
           )}
-
           {deliveryType === "code" && <CodeInfo />}
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
+      <div className="mt-auto flex flex-col gap-2">
         <div className="flex justify-between items-center bg-brand-surface p-4 border border-brand-surface_hover">
-          <span className="text-sm text-brand-surface_m font-medium">
-            مبلغ نهایی:
-          </span>
-
+          <span className="text-sm text-brand-surface_m font-medium">مبلغ نهایی:</span>
           {deliveryType === null ? (
-            <span className="text-sm text-brand-surface_m">
-              ابتدا روش تحویل را انتخاب کنید
-            </span>
+            <span className="text-sm text-brand-surface_m">ابتدا روش تحویل را انتخاب کنید</span>
           ) : typeof currentPrice === "number" ? (
-            <PriceDisplay
-              price={currentPrice}
-              regularPrice={regularPrice ?? undefined}
-            />
+            <PriceDisplay price={currentPrice} regularPrice={regularPrice ?? undefined} />
           ) : (
-            <span className="text-red-500 font-bold text-lg">
-              ناموجود
-            </span>
+            <span className="text-red-500 font-bold text-lg">ناموجود</span>
           )}
         </div>
 
         <div className="relative">
           <ConfettiBurst trigger={burstKey} />
-
           <button
             type="button"
             onClick={handleAddToCart}
