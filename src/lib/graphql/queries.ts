@@ -546,6 +546,9 @@ const PRODUCT_DETAIL_PRICING_QUERY = `
 `;
 
 interface ProductPricingSlice {
+  price?: string;
+  regularPrice?: string;
+  salePrice?: string;
   parsedPrice: number | null;
   parsedRegularPrice: number | null;
   variationCards: ProductNode["variationCards"];
@@ -583,10 +586,13 @@ async function getProductDetailContent(slug: string) {
         shortDescription: sanitizeHtml(product.shortDescription),
         description: sanitizeHtml(product.description),
         secondaryGallery: product.secondaryGallery
-          ? product.secondaryGallery.map((item: { description?: string; imageUrl?: string }) => ({
-              ...item,
-              description: sanitizeHtml(item.description) ?? item.description,
-            }))
+          ? product.secondaryGallery.map(
+              (item: { description?: string; imageUrl?: string }) => ({
+                ...item,
+                description:
+                  sanitizeHtml(item.description) ?? item.description,
+              })
+            )
           : product.secondaryGallery,
       };
     },
@@ -615,19 +621,31 @@ async function getProductDetailPricing(
 
       if (!data.product) return null;
 
-      const formatted = formatProducts([data.product], false, activeRegion)[0];
+      const formatted = formatProducts(
+        [data.product],
+        false,
+        activeRegion
+      )[0];
+
       if (!formatted) return null;
 
       return {
+        price: formatted.price,
+        regularPrice: formatted.regularPrice,
+        salePrice: formatted.salePrice,
         parsedPrice: formatted.parsedPrice ?? null,
         parsedRegularPrice: formatted.parsedRegularPrice ?? null,
         variationCards: formatted.variationCards ?? [],
         isVariation: Boolean(formatted.isVariation),
-        isAvailableInRegion: formatted.isAvailableInRegion !== false,
+        isAvailableInRegion:
+          formatted.isAvailableInRegion !== false,
       };
     },
     ["product-detail-pricing", slug, activeRegion],
-    { tags: [`product-pricing-${slug}`], revalidate: false }
+    {
+      tags: [`product-pricing-${slug}`],
+      revalidate: false,
+    }
   );
 
   return cached();
