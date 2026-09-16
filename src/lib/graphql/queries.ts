@@ -88,7 +88,9 @@ export async function getHeaderCategories() {
 }
 
 export async function getProducts(categorySlug?: string, activeRegion: string = "eu") {
-  const tags = categorySlug ? ["products", `category-${categorySlug}`] : ["products"];
+  const tags = categorySlug
+    ? ["products", buildSlugTag("category", categorySlug)]
+    : ["products"];
 
   const cached = unstable_cache(
     async () => {
@@ -251,7 +253,7 @@ export async function getHomeFeaturedProducts(activeRegion: string = "eu") {
           }
         `,
         { regionSlug: activeRegion },
-        ["products", "home"],
+        ["products", "home", "home-featured"],
         "force-cache"
       );
 
@@ -262,7 +264,7 @@ export async function getHomeFeaturedProducts(activeRegion: string = "eu") {
       );
     },
     ["home-featured-products", activeRegion],
-    { tags: ["products", "home"], revalidate: false }
+    { tags: ["products", "home", "home-featured"], revalidate: false }
   );
 
   return cached();
@@ -281,7 +283,7 @@ export async function getHomeLatestProducts(activeRegion: string = "eu") {
           }
         `,
         { regionSlug: activeRegion },
-        ["products", "home"],
+        ["products", "home", "home-latest"],
         "force-cache"
       );
 
@@ -292,7 +294,7 @@ export async function getHomeLatestProducts(activeRegion: string = "eu") {
       );
     },
     ["home-latest-products", activeRegion],
-    { tags: ["products", "home"], revalidate: false }
+    { tags: ["products", "home", "home-latest"], revalidate: false }
   );
 
   return cached();
@@ -458,32 +460,112 @@ export async function getRelatedPosts(params: {
   return cached();
 }
 
-export async function getProductDetail(slug: string, activeRegion: string = "eu") {
-  if (!slug) return null;
+const PRODUCT_DETAIL_CONTENT_QUERY = `
+  query GetProductDetailContent($id: ID!) {
+    product(id: $id, idType: SLUG) {
+      id
+      databaseId
+      name
+      slug
+      featured
+      date
+      shortDescription
+      shortNotify
 
+      image { sourceUrl(size: MEDIUM) }
+      imageLarge: image { sourceUrl(size: LARGE) }
+
+      productCategories(first: 10) {
+        nodes {
+          name
+          slug
+          image { sourceUrl(size: THUMBNAIL) }
+          categoryImage { sourceUrl(size: "thumbnail") }
+        }
+      }
+
+      description
+      secondaryGallery { description imageUrl }
+      galleryImages { nodes { sourceUrl(size: LARGE) } }
+      attributes { nodes { name options } }
+      averageRating
+      reviewCount
+      contentMatrix {
+        columns { key label }
+        items { name includedIn }
+        image
+      }
+    }
+  }
+`;
+
+const PRODUCT_DETAIL_PRICING_QUERY = `
+  query GetProductDetailPricing($id: ID!) {
+    product(id: $id, idType: SLUG) {
+      databaseId
+
+      ... on SimpleProduct {
+        price
+        regularPrice
+        salePrice
+      }
+
+      ... on VariableProduct {
+        price
+        regularPrice
+        salePrice
+
+        variationCards {
+          databaseId
+          name
+          slug
+          price
+          regularPrice
+          salePrice
+          imageUrl
+          regionSlug
+
+          giftPriceToman
+          giftRegularPriceToman
+
+          codePriceToman
+          codeRegularPriceToman
+          codeStockCount
+
+          attributes {
+            name
+            taxonomy
+            value
+            slug
+            flagUrl
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface ProductPricingSlice {
+  parsedPrice: number | null;
+  parsedRegularPrice: number | null;
+  variationCards: ProductNode["variationCards"];
+  isVariation: boolean;
+  isAvailableInRegion: boolean;
+}
+
+const EMPTY_PRICING_SLICE: ProductPricingSlice = {
+  parsedPrice: null,
+  parsedRegularPrice: null,
+  variationCards: [],
+  isVariation: false,
+  isAvailableInRegion: false,
+};
+
+async function getProductDetailContent(slug: string) {
   const cached = unstable_cache(
     async () => {
       const data = await fetchGraphQL(
-        `
-          ${PRODUCT_CARD_FIELDS}
-          query GetProductDetail($id: ID!) {
-            product(id: $id, idType: SLUG) {
-              ...ProductCardFields
-              imageLarge: image { sourceUrl(size: LARGE) }
-              description
-              secondaryGallery { description imageUrl }
-              galleryImages { nodes { sourceUrl(size: LARGE) } }
-              attributes { nodes { name options } }
-              averageRating
-              reviewCount
-              contentMatrix {
-                columns { key label }
-                items { name includedIn }
-                image
-              }
-            }
-          }
-        `,
+        PRODUCT_DETAIL_CONTENT_QUERY,
         { id: slug },
         [`product-${slug}`]
       );
@@ -494,17 +576,80 @@ export async function getProductDetail(slug: string, activeRegion: string = "eu"
 
       if (!data.product) return null;
 
-      const formatted = formatProducts([data.product], false, activeRegion);
-      const product = formatted[0] ?? null;
-      if (!product) return null;
+      const product = data.product;
 
-      return product;
+      return {
+        ...product,
+        shortDescription: sanitizeHtml(product.shortDescription),
+        description: sanitizeHtml(product.description),
+        secondaryGallery: product.secondaryGallery
+          ? product.secondaryGallery.map((item: { description?: string; imageUrl?: string }) => ({
+              ...item,
+              description: sanitizeHtml(item.description) ?? item.description,
+            }))
+          : product.secondaryGallery,
+      };
     },
-    ["product-detail", slug, activeRegion],
+    ["product-detail-content", slug],
     { tags: [`product-${slug}`], revalidate: false }
   );
 
   return cached();
+}
+
+async function getProductDetailPricing(
+  slug: string,
+  activeRegion: string
+): Promise<ProductPricingSlice | null> {
+  const cached = unstable_cache(
+    async (): Promise<ProductPricingSlice | null> => {
+      const data = await fetchGraphQL(
+        PRODUCT_DETAIL_PRICING_QUERY,
+        { id: slug },
+        [`product-pricing-${slug}`]
+      );
+
+      if (data === null) {
+        throw new Error(`دریافت قیمت محصول «${slug}» با خطا مواجه شد`);
+      }
+
+      if (!data.product) return null;
+
+      const formatted = formatProducts([data.product], false, activeRegion)[0];
+      if (!formatted) return null;
+
+      return {
+        parsedPrice: formatted.parsedPrice ?? null,
+        parsedRegularPrice: formatted.parsedRegularPrice ?? null,
+        variationCards: formatted.variationCards ?? [],
+        isVariation: Boolean(formatted.isVariation),
+        isAvailableInRegion: formatted.isAvailableInRegion !== false,
+      };
+    },
+    ["product-detail-pricing", slug, activeRegion],
+    { tags: [`product-pricing-${slug}`], revalidate: false }
+  );
+
+  return cached();
+}
+
+export async function getProductDetail(
+  slug: string,
+  activeRegion: string = "eu"
+): Promise<ProductNode | null> {
+  if (!slug) return null;
+
+  const [content, pricing] = await Promise.all([
+    getProductDetailContent(slug),
+    getProductDetailPricing(slug, activeRegion),
+  ]);
+
+  if (!content) return null;
+
+  return {
+    ...content,
+    ...(pricing ?? EMPTY_PRICING_SLICE),
+  } as ProductNode;
 }
 
 export async function getRegions() {
