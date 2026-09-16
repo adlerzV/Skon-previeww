@@ -507,6 +507,39 @@ export async function getProductDetail(slug: string, activeRegion: string = "eu"
   return cached();
 }
 
+export async function getRegions() {
+  const cached = unstable_cache(
+    async () => {
+      const data = await fetchGraphQL(
+        `
+          query GetRegions {
+            allPaRegionShop(first: 10) {
+              nodes { name title slug flagUrl }
+            }
+          }
+        `,
+        {},
+        ["regions"]
+      );
+
+      if (!data?.allPaRegionShop?.nodes) {
+        console.error("getRegions: no data returned");
+        return [];
+      }
+
+      return data.allPaRegionShop.nodes.map((r: Record<string, string>) => ({
+        name: r.name || r.title,
+        slug: r.slug,
+        flagUrl: r.flagUrl || undefined,
+      }));
+    },
+    ["regions"],
+    { tags: ["regions"], revalidate: false }
+  );
+
+  return cached();
+}
+
 export async function getBlogCategoryArchive(slug: string) {
   if (!slug) return null;
 
