@@ -400,20 +400,12 @@ export default function ProductPageClient({
     [groupedAttributes, variations, regionInfo]
   );
 
-  const category = product.productCategories?.nodes?.[0];
-  const categoryImageUrl = category?.image?.sourceUrl || category?.categoryImage?.sourceUrl;
-
   return (
     <div className="flex flex-col gap-12 w-full min-h-screen" dir="rtl">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 w-full">
         <div className="lg:col-span-4 lg:sticky lg:top-6 lg:self-start flex flex-col gap-6 w-full">
           <div>
             <div className="flex items-center gap-2.5">
-              {categoryImageUrl && (
-                <div className="relative w-8 h-8 overflow-hidden mb-3">
-                  <Image src={categoryImageUrl} alt={category?.name ?? ""} fill className="object-cover" />
-                </div>
-              )}
               <h1 className="text-2xl md:text-3xl font-black text-brand-active leading-tight">{product.name}</h1>
               {wishlistSlot}
             </div>
