@@ -12,6 +12,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ProductNode, VariationCard } from "@/lib/graphql";
 import DeliveryAndPrice from "@/components/product/DeliveryAndPrice";
 import VariationSelector from "@/components/product/VariationSelector";
+import ProductStickyBar from "@/components/product/ProductStickyBar";
 
 interface Props {
   product: ProductNode;
@@ -99,6 +100,10 @@ export default function ProductPageClient({
 }: Props) {
   const variations = product.variationCards ?? [];
   const activeThumbRef = useRef<HTMLButtonElement>(null);
+  const heroRowRef = useRef<HTMLDivElement>(null);
+  const hasScrolledThumbRef = useRef(false);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+
   const effectiveRegion =
     !activeRegion || activeRegion === "$undefined" || activeRegion === "undefined"
       ? "eu-global"
@@ -353,8 +358,27 @@ export default function ProductPageClient({
   }, [allGalleryImages, displayImage]);
 
   useEffect(() => {
-    activeThumbRef.current?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    if (!hasScrolledThumbRef.current) {
+      hasScrolledThumbRef.current = true;
+      return;
+    }
+    activeThumbRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [currentIndex]);
+
+  useEffect(() => {
+    const el = heroRowRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowStickyBar(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const handleAttrSelect = useCallback(
     (name: string, val: string) => {
@@ -402,8 +426,21 @@ export default function ProductPageClient({
 
   return (
     <div className="flex flex-col gap-12 w-full min-h-screen" dir="rtl">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 w-full">
-        <div className="lg:col-span-4 lg:sticky lg:top-6 lg:self-start flex flex-col gap-6 w-full">
+      <ProductStickyBar
+        visible={showStickyBar}
+        productName={product.name}
+        groupedAttributes={groupedAttributes}
+        selectedAttrs={selectedAttrs}
+        onAttributeSelect={handleAttrSelect}
+        price={combinedAggregateVar?.parsedPrice ?? null}
+        regularPrice={typeof combinedAggregateVar?.parsedRegularPrice === "number" ? combinedAggregateVar.parsedRegularPrice : null}
+        onCtaClick={() => {
+          heroRowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      />
+
+      <div ref={heroRowRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 w-full items-stretch">
+        <div className="lg:col-span-4 flex flex-col gap-6 w-full">
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl md:text-3xl font-black text-brand-active leading-tight">{product.name}</h1>
@@ -424,71 +461,75 @@ export default function ProductPageClient({
             regionInfo={regionInfo}
           />
 
-          <DeliveryAndPrice
-            selectedVariation={combinedAggregateVar}
-            productId={product.databaseId}
-            productName={product.name}
-            selectedAttrs={selectedAttrs}
-            groupedAttributes={groupedAttributes}
-            regionInfo={regionInfo}
-          />
+          <div className="flex-1 flex flex-col min-h-0">
+            <DeliveryAndPrice
+              selectedVariation={combinedAggregateVar}
+              productId={product.databaseId}
+              productName={product.name}
+              selectedAttrs={selectedAttrs}
+              groupedAttributes={groupedAttributes}
+              regionInfo={regionInfo}
+            />
+          </div>
         </div>
         <div className="lg:col-span-8 flex flex-col gap-6 w-full">
-          <div className="relative w-full aspect-[16/9] bg-brand-surface overflow-hidden border border-brand-surface_hover shadow-lg group">
-            <Image
-              src={displayImage}
-              alt={product.name}
-              fill
-              priority
-              quality={90}
-              className="object-cover transition-opacity duration-300"
-              sizes="(max-width: 1024px) 100vw, 70vw"
-            />
+          <div className="flex flex-col sm:flex-row sm:items-stretch gap-3 w-full">
+            <div className="relative w-full sm:flex-1 aspect-[16/9] bg-brand-surface overflow-hidden border border-brand-surface_hover shadow-lg group">
+              <Image
+                src={displayImage}
+                alt={product.name}
+                fill
+                priority
+                quality={90}
+                className="object-cover transition-opacity duration-300"
+                sizes="(max-width: 1024px) 100vw, 70vw"
+              />
+              {allGalleryImages.length > 1 && (
+                <>
+                  <GalleryNavButton
+                    direction="prev"
+                    disabled={currentIndex === 0}
+                    onClick={() => setSelectedGalleryImage(allGalleryImages[currentIndex - 1])}
+                  />
+                  <GalleryNavButton
+                    direction="next"
+                    disabled={currentIndex === allGalleryImages.length - 1}
+                    onClick={() => setSelectedGalleryImage(allGalleryImages[currentIndex + 1])}
+                  />
+                </>
+              )}
+            </div>
+
             {allGalleryImages.length > 1 && (
-              <>
-                <GalleryNavButton
-                  direction="prev"
-                  disabled={currentIndex === 0}
-                  onClick={() => setSelectedGalleryImage(allGalleryImages[currentIndex - 1])}
-                />
-                <GalleryNavButton
-                  direction="next"
-                  disabled={currentIndex === allGalleryImages.length - 1}
-                  onClick={() => setSelectedGalleryImage(allGalleryImages[currentIndex + 1])}
-                />
-              </>
+              <div className="w-full sm:w-[96px] lg:w-[108px] shrink-0 overflow-x-auto sm:overflow-x-visible sm:overflow-y-auto scrollbar-hide py-1 sm:py-0">
+                <div className="flex sm:flex-col gap-2.5 w-max sm:w-full">
+                  {allGalleryImages.map((imgUrl, idx) => (
+                    <button
+                      key={`${imgUrl}-${idx}`}
+                      ref={idx === currentIndex ? activeThumbRef : undefined}
+                      type="button"
+                      onClick={() => setSelectedGalleryImage(imgUrl)}
+                      className={`relative w-[86px] sm:w-full aspect-video flex-shrink-0 overflow-hidden border transition-all duration-300 ${
+                        idx === currentIndex
+                          ? "border-brand-blue opacity-100 ring-2 ring-brand-blue/60 shadow-[0_0_12px_rgba(0,116,224,0.3)]"
+                          : "border-brand-surface_hover opacity-40 hover:opacity-80"
+                      }`}
+                      aria-label={`تصویر ${idx + 1}`}
+                    >
+                      <Image
+                        src={imgUrl}
+                        alt={`گالری ${idx + 1}`}
+                        fill
+                        sizes="100px"
+                        quality={75}
+                        className="object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
-
-          {allGalleryImages.length > 1 && (
-            <div className="w-full overflow-x-auto scrollbar-hide py-1">
-              <div className="flex gap-2 w-max">
-                {allGalleryImages.map((imgUrl, idx) => (
-                  <button
-                    key={`${imgUrl}-${idx}`}
-                    ref={idx === currentIndex ? activeThumbRef : undefined}
-                    type="button"
-                    onClick={() => setSelectedGalleryImage(imgUrl)}
-                    className={`relative w-[100px] aspect-video flex-shrink-0 overflow-hidden border transition-all duration-300 ${
-                      idx === currentIndex
-                        ? "border-brand-blue opacity-100 ring-2 ring-brand-blue/60 shadow-[0_0_12px_rgba(0,116,224,0.3)]"
-                        : "border-brand-surface_hover opacity-40 hover:opacity-80"
-                    }`}
-                    aria-label={`تصویر ${idx + 1}`}
-                  >
-                    <Image
-                      src={imgUrl}
-                      alt={`گالری ${idx + 1}`}
-                      fill
-                      sizes="100px"
-                      quality={75}
-                      className="object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {product.shortDescription && (
             <div className="bg-brand-menu p-6 border border-brand-surface_hover">

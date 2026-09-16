@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 import UserAvatar from "@/components/ui/UserAvatar";
 import AdminBadge from "@/components/ui/AdminBadge";
 
@@ -301,7 +301,7 @@ export default function ProductReviews({
         نظرات کاربران
       </h2>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch w-full">        <div className="lg:col-span-8 flex flex-col gap-6 w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">        <div className="lg:col-span-8 flex flex-col gap-6 w-full">
           {isLoggedIn ? (
             <form onSubmit={handleSubmit} className="bg-brand-menu p-6 border border-brand-surface_hover flex flex-col gap-4">
               <span className="text-sm font-bold text-brand-active">امتیاز و نظر خود را بنویسید</span>
@@ -356,13 +356,17 @@ export default function ProductReviews({
               </button>
             </form>
           ) : (
-            <div className="bg-brand-menu p-6 border border-brand-surface_hover flex flex-col sm:flex-row items-center justify-between gap-3">
-              <span className="text-sm text-brand-surface_m text-center sm:text-right">
-                برای ثبت نظر، ابتدا باید وارد حساب کاربری خود شوید.
+            <div className="bg-brand-menu p-6 md:p-8 border border-brand-surface_hover flex flex-col items-center text-center gap-4">
+              <span className="w-12 h-12 rounded-full bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0">
+                <LogIn size={20} />
               </span>
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-bold text-brand-active">برای ثبت نظر ابتدا وارد شوید</span>
+                <span className="text-xs text-brand-surface_m">نظر شما به سایر کاربران در انتخاب بهتر کمک می‌کند.</span>
+              </div>
               <Link
                 href="/my-account"
-                className="bg-brand-blue text-white text-sm font-bold py-2.5 px-6 hover:bg-brand-blue/80 transition-colors whitespace-nowrap"
+                className="bg-brand-blue text-white text-sm font-bold py-2.5 px-8 hover:bg-brand-blue/80 transition-colors whitespace-nowrap"
               >
                 ورود به حساب
               </Link>

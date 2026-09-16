@@ -42,7 +42,7 @@ function DirectForm({
           value={email}
           onChange={(e) => onEmailChange(e.target.value)}
           placeholder="ایمیل اکانت"
-          className="w-full bg-brand-bg border border-brand-surface_hover p-3 pl-10 text-sm text-brand-active focus:outline-none focus:border-brand-blue transition-colors text-left"
+          className="w-full bg-brand-bg border border-brand-surface_hover p-3 pl-10 text-base md:text-sm text-brand-active focus:outline-none focus:border-brand-blue transition-colors text-left"
           dir="ltr"
           autoComplete="off"
           autoCapitalize="off"
@@ -64,7 +64,7 @@ function DirectForm({
           value={password}
           onChange={(e) => onPasswordChange(e.target.value)}
           placeholder="پسورد اکانت"
-          className="w-full bg-brand-bg border border-brand-surface_hover p-3 pl-16 text-sm text-brand-active focus:outline-none focus:border-brand-blue transition-colors text-left"
+          className="w-full bg-brand-bg border border-brand-surface_hover p-3 pl-16 text-base md:text-sm text-brand-active focus:outline-none focus:border-brand-blue transition-colors text-left"
           dir="ltr"
           autoComplete="new-password"
         />
@@ -125,7 +125,7 @@ function GiftForm({
           value={battleTag}
           onChange={(e) => onBattleTagChange(e.target.value)}
           placeholder="BattleTag#1234"
-          className="w-full bg-brand-bg border border-brand-surface_hover p-4 pl-10 text-sm text-brand-active focus:outline-none focus:border-brand-zard font-mono text-left"
+          className="w-full bg-brand-bg border border-brand-surface_hover p-4 pl-10 text-base md:text-sm text-brand-active focus:outline-none focus:border-brand-zard font-mono text-left"
           dir="ltr"
           autoComplete="off"
           spellCheck={false}
@@ -358,7 +358,7 @@ const handleAddToCart = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 h-full">
       <div className="flex flex-col gap-2">
         <span className="text-brand-surface_m text-[13px] font-bold uppercase tracking-wide">
           مسیر تحویل محصول:
