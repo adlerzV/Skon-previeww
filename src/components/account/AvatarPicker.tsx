@@ -76,10 +76,11 @@ export default function AvatarPicker({
       const res = await fetch("/api/account/avatar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+
         body: JSON.stringify({ avatarId: pendingId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error(data?.error || "avatar save failed");
 
       setSelectedId(data.avatarId);
       setSelectedUrl(data.avatarUrl);
@@ -93,15 +94,18 @@ export default function AvatarPicker({
     }
   };
 
-  const renderGrid = (list: AvatarOption[]) => (
+  const renderGrid = (list: AvatarOption[], scope: "users" | "admin") => (
     <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4 md:gap-5">
       {list.map((avatar) => {
-        const isSelected = pendingId === avatar.id;
+
+        const scopedId = `${scope}/${avatar.id}`;
+        const isSelected = pendingId === scopedId;
+
         return (
           <button
-            key={avatar.id}
+            key={scopedId}
             type="button"
-            onClick={() => setPendingId(avatar.id)}
+            onClick={() => setPendingId(scopedId)}
             disabled={isSaving}
             className={`relative w-16 h-16 md:w-20 md:h-20 mx-auto rounded-full overflow-hidden border-2 transition-all duration-150 hover:scale-105 disabled:opacity-50 disabled:pointer-events-none ${
               isSelected
@@ -156,7 +160,7 @@ export default function AvatarPicker({
           <div className="text-center py-14 text-sm text-brand-m_khonsa">هنوز هیچ آواتاری تعریف نشده است.</div>
         ) : (
           <div className="flex flex-col gap-7">
-            {renderGrid(avatars)}
+            {renderGrid(avatars, "users")}
 
             {isStaff && adminAvatars.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-brand-surface_hover pt-6">
@@ -164,7 +168,7 @@ export default function AvatarPicker({
                   <ShieldCheck size={14} />
                   آواتارهای مخصوص ادمین
                 </span>
-                {renderGrid(adminAvatars)}
+                {renderGrid(adminAvatars, "admin")}
               </div>
             )}
 

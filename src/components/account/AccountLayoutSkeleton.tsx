@@ -23,7 +23,7 @@ export default function AccountLayoutSkeleton() {
           <Skeleton className="w-9 h-9 rounded" />
         </div>
 
-        <main className="flex-1 min-h-0 w-full p-4 md:p-6 overflow-y-auto">
+        <main className="flex-1 min-h-0 w-full p-4 md:p-6 pb-[calc(58px+env(safe-area-inset-bottom)+16px)] lg:pb-6 overflow-y-auto">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
             <Skeleton className="lg:col-span-2 h-[110px]" />
             <Skeleton className="h-[110px]" />
@@ -40,7 +40,10 @@ export default function AccountLayoutSkeleton() {
         </main>
       </div>
 
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-[9997] bg-[#15171e] border-t border-white/5 h-[58px] grid grid-cols-4 items-center px-2">
+      <div
+        className="lg:hidden fixed bottom-0 inset-x-0 z-[9997] bg-[#15171e] border-t border-white/5 h-[58px] grid grid-cols-4 items-center px-2"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex flex-col items-center justify-center gap-1.5">
             <Skeleton className="w-5 h-5 rounded-full" />

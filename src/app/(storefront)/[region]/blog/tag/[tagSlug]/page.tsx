@@ -8,10 +8,13 @@ interface BlogTagPageProps {
 
 export default async function BlogTagPage({ params }: BlogTagPageProps) {
   const { region, tagSlug } = await params;
-  const tag = await getBlogTagArchive(tagSlug);
-  if (!tag) notFound();
 
-  const { posts, pageInfo } = await getAllBlogPosts({ tagSlugs: [tagSlug] });
+  const [tag, { posts, pageInfo }] = await Promise.all([
+    getBlogTagArchive(tagSlug),
+    getAllBlogPosts({ tagSlugs: [tagSlug] }),
+  ]);
+
+  if (!tag) notFound();
 
   return (
     <main className="container mx-auto px-4 md:px-6 py-8 md:py-12 text-white max-w-site">
