@@ -38,8 +38,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (sessionId) {
-      await fetchGraphQL(TOUCH_SESSION_MUTATION, { sessionId }, [], "no-store", newToken);
+    if (!sessionId) return NextResponse.json({ error: "نشست نامعتبر است" }, { status: 401 });
+    const previousToken = cookieStore.get(AUTH_TOKEN_COOKIE)?.value;
+    const touched = await fetchGraphQL(
+      TOUCH_SESSION_MUTATION,
+      { sessionId },
+      [],
+      "no-store",
+      newToken,
+      sessionId,
+      undefined,
+      previousToken
+    );
+    if (!touched?.touchSession?.success) {
+      return NextResponse.json({ error: "نشست شما لغو شده است" }, { status: 401 });
     }
 
     const isProd = process.env.NODE_ENV === "production";

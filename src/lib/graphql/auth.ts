@@ -129,8 +129,8 @@ export const CREATE_ORDER_MUTATION = `
 `;
 
 export const SUBMIT_CUSTOMER_ORDER_MUTATION = `
-  mutation SubmitCustomerOrder($lineItems: [BtlOrderLineItemInput]!, $customerNote: String) {
-    submitCustomerOrder(input: { lineItems: $lineItems, customerNote: $customerNote }) {
+  mutation SubmitCustomerOrder($lineItems: [BtlOrderLineItemInput]!, $customerNote: String, $idempotencyKey: String) {
+    submitCustomerOrder(input: { lineItems: $lineItems, customerNote: $customerNote, idempotencyKey: $idempotencyKey }) {
       order {
         databaseId
         orderKey

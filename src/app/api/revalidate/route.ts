@@ -28,9 +28,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Missing tag" }, { status: 400 });
     }
 
-    const tags: string[] = (Array.isArray(tag) ? tag : [tag])
-      .filter((t: unknown): t is string => typeof t === "string" && t.trim() !== "")
-      .slice(0, MAX_TAGS_PER_REQUEST);
+    const requestedTags = Array.isArray(tag) ? tag : [tag];
+    if (requestedTags.length > MAX_TAGS_PER_REQUEST) {
+      return NextResponse.json({ message: "Too many tags" }, { status: 413 });
+    }
+    const tags: string[] = requestedTags
+      .filter((t: unknown): t is string => typeof t === "string" && t.trim() !== "");
+    if (tags.length !== requestedTags.length || tags.length === 0) {
+      return NextResponse.json({ message: "Invalid tag list" }, { status: 400 });
+    }
 
     const revalidated: string[] = [];
     const failed: string[] = [];

@@ -1,7 +1,6 @@
 import { ChevronDown, Download } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import SecretReveal from "./SecretReveal";
-import CredentialReveal from "./CredentialReveal";
 import FulfillmentStepper from "./FulfillmentStepper";
 
 interface MetaEntry { key: string; value: string; }
@@ -98,10 +97,7 @@ export default function OrdersTable({ orders, downloadableItems = [] }: { orders
                               <span className="text-xs text-brand-zard font-bold">در حال آماده‌سازی کد...</span>
                             )
                           ) : deliveryMethod === "direct" || deliveryMethod === "gift" ? (
-                            <div className="flex flex-col gap-2">
-                              <FulfillmentStepper status={item.fulfillmentStatus || "queued"} />
-                              <CredentialReveal orderId={order.databaseId} itemId={item.databaseId} deliveryMethod={deliveryMethod} />
-                            </div>
+                            <FulfillmentStepper status={item.fulfillmentStatus || "queued"} />
                           ) : (
                             <span className="text-xs text-brand-m_khonsa">—</span>
                           )}

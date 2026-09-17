@@ -90,6 +90,7 @@ interface CartContextType {
   updateQuantity: (id: string, quantity: number) => void;
   updateCredentials: (id: string, credentials: NonNullable<CartItem["customFields"]>) => void;
   clearCart: () => void;
+  clearSensitiveCredentials: () => void;
   totalPrice: number;
   totalQuantity: number;
   isCartFull: boolean;
@@ -111,7 +112,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const stored = parseStoredCart(getClientCookie(CART_COOKIE));
     const hydrated = stored.map((item) => ({
       ...item,
-      customFields: getCredentials(item.id) || item.customFields,
+      customFields: getCredentials(item.id) ?? undefined,
     }));
     setCart(hydrated);
     setIsMounted(true);
@@ -220,11 +221,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     []
   );
 
-  const clearCart = useCallback(() => {
+  const clearSensitiveCredentials = useCallback(() => {
     cartRef.current.forEach((item) => removeCredentials(item.id));
+    setCart((prev) => prev.map((item) => ({ ...item, customFields: undefined })));
+  }, []);
+
+  const clearCart = useCallback(() => {
+    clearSensitiveCredentials();
     setCart([]);
     removeClientCookie(CART_COOKIE);
-  }, []);
+  }, [clearSensitiveCredentials]);
 
   const totalPrice = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -245,6 +251,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateQuantity,
         updateCredentials,
         clearCart,
+        clearSensitiveCredentials,
         totalPrice,
         totalQuantity,
         isCartFull: totalQuantity >= MAX_CART_QUANTITY,

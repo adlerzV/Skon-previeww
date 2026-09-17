@@ -11,8 +11,11 @@ const STATUS_OPTIONS = [
   { value: "ALL", label: "همه" },
   { value: "PENDING", label: "در انتظار" },
   { value: "PROCESSING", label: "در حال پردازش" },
+  { value: "ON_HOLD", label: "در انتظار بررسی" },
   { value: "COMPLETED", label: "تکمیل‌شده" },
   { value: "CANCELLED", label: "لغو‌شده" },
+  { value: "REFUNDED", label: "بازگشت وجه" },
+  { value: "FAILED", label: "ناموفق" },
 ];
 
 export default function OrdersPaginated({

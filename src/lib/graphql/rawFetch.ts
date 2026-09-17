@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { SESSION_ID_COOKIE } from "@/lib/auth/constants";
 import "server-only";
 
 const WP_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL;
@@ -25,9 +27,18 @@ function resolveEndpoint(): { url: string; hostHeader?: string } {
 export async function fetchGraphQLWithErrors(
   query: string,
   variables: Record<string, unknown> = {},
-  authToken?: string
+  authToken?: string,
+  sessionId?: string,
+  bootstrapProof?: string,
+  previousAuthToken?: string
 ): Promise<{ data: any; errorMessage: string | null }> {
   const { url: endpointUrl, hostHeader } = resolveEndpoint();
+  let boundSessionId = sessionId;
+  if (!boundSessionId) {
+    try {
+      boundSessionId = (await cookies()).get(SESSION_ID_COOKIE)?.value;
+    } catch {}
+  }
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -39,6 +50,9 @@ export async function fetchGraphQLWithErrors(
       headers: {
         "Content-Type": "application/json",
         ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        ...(boundSessionId ? { "X-BTL-Session-ID": boundSessionId } : {}),
+        ...(bootstrapProof ? { "X-BTL-Session-Bootstrap": bootstrapProof } : {}),
+        ...(previousAuthToken ? { "X-BTL-Previous-Authorization": `Bearer ${previousAuthToken}` } : {}),
         ...(hostHeader ? { Host: hostHeader } : {}),
       },
       body: JSON.stringify({ query, variables }),

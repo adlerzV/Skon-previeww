@@ -1,5 +1,5 @@
 import "server-only";
-import { randomUUID } from "crypto";
+import { createHash, createHmac, randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchGraphQL } from "@/lib/graphql";
 import { REGISTER_SESSION_MUTATION } from "@/lib/graphql/auth";
@@ -19,7 +19,7 @@ export async function completeLogin(
   tokens: { authToken: string; refreshToken?: string | null },
   extra: Record<string, unknown> = {}
 ) {
-  const sessionId = request.cookies.get(SESSION_ID_COOKIE)?.value || randomUUID();
+  const sessionId = randomUUID();
   const userAgent = request.headers.get("user-agent") || "";
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -27,18 +27,26 @@ export async function completeLogin(
     "unknown";
 
   let isStaff = false;
-
+  const bindingSecret = process.env.SESSION_BINDING_SECRET;
+  if (!bindingSecret) {
+    return NextResponse.json({ success: false, error: "تنظیم امنیت نشست ناقص است" }, { status: 503 });
+  }
+  const tokenHash = createHash("sha256").update(tokens.authToken).digest("hex");
+  const bootstrapProof = createHmac("sha256", bindingSecret).update(`${sessionId}.${tokenHash}`).digest("hex");
   try {
     const sessionData = await fetchGraphQL(
       REGISTER_SESSION_MUTATION,
       { sessionId, deviceLabel: detectDeviceLabel(userAgent), ipAddress: ip, userAgent },
       [],
       "no-store",
-      tokens.authToken
+      tokens.authToken,
+      sessionId,
+      bootstrapProof
     );
-    isStaff = Boolean(sessionData?.registerSession?.isStaff);
+    if (!sessionData?.registerSession?.success) throw new Error("session_registration_failed");
+    isStaff = Boolean(sessionData.registerSession.isStaff);
   } catch {
-    isStaff = false;
+    return NextResponse.json({ success: false, error: "ثبت نشست کاربری ناموفق بود؛ دوباره وارد شوید" }, { status: 503 });
   }
 
   const isProd = process.env.NODE_ENV === "production";

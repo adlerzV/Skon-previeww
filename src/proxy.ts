@@ -45,7 +45,11 @@ function needsRefresh(token: string | undefined): boolean {
   return Math.floor(Date.now() / 1000) >= exp - 20;
 }
 
-async function refreshAuthToken(refreshToken: string): Promise<string | null> {
+async function refreshAuthToken(
+  refreshToken: string,
+  sessionId: string | undefined,
+  previousAuthToken: string | undefined
+): Promise<string | null> {
   const { url, hostHeader } = resolveEndpoint();
   try {
     const res = await fetch(url, {
@@ -64,7 +68,26 @@ async function refreshAuthToken(refreshToken: string): Promise<string | null> {
     if (!res.ok) return null;
     const json = await res.json().catch(() => null);
     const token = json?.data?.refreshJwtAuthToken?.authToken;
-    return typeof token === "string" && token ? token : null;
+    if (typeof token !== "string" || !token || !sessionId || !previousAuthToken) return null;
+
+    const touched = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "X-BTL-Session-ID": sessionId,
+        "X-BTL-Previous-Authorization": `Bearer ${previousAuthToken}`,
+        ...(hostHeader ? { Host: hostHeader } : {}),
+      },
+      body: JSON.stringify({
+        query: "mutation TouchSession($sessionId: String!) { touchSession(input: { sessionId: $sessionId }) { success } }",
+        variables: { sessionId },
+      }),
+      cache: "no-store",
+    });
+    if (!touched.ok) return null;
+    const touchedJson = await touched.json().catch(() => null);
+    return touchedJson?.data?.touchSession?.success === true ? token : null;
   } catch {
     return null;
   }
@@ -73,10 +96,11 @@ async function refreshAuthToken(refreshToken: string): Promise<string | null> {
 async function applyAuthRefresh(request: NextRequest): Promise<string | null> {
   const authToken = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
   const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
+  const sessionId = request.cookies.get("a2b_session_id")?.value;
 
   if (!refreshToken || !needsRefresh(authToken)) return null;
 
-  const newToken = await refreshAuthToken(refreshToken);
+  const newToken = await refreshAuthToken(refreshToken, sessionId, authToken);
   if (newToken) {
     request.cookies.set(AUTH_TOKEN_COOKIE, newToken);
     return newToken;

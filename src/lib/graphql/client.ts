@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { SESSION_ID_COOKIE } from "@/lib/auth/constants";
 import "server-only";
 
 const WP_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL;
@@ -54,7 +56,10 @@ export async function fetchGraphQL(
   variables: Record<string, unknown> = {},
   tags: string[] = [],
   cacheStrategy: CacheStrategy | RequestCache = "force-cache",
-  authToken?: string
+  authToken?: string,
+  sessionId?: string,
+  bootstrapProof?: string,
+  previousAuthToken?: string
 ) {
   const strategy: CacheStrategy =
     typeof cacheStrategy === "string"
@@ -64,6 +69,12 @@ export async function fetchGraphQL(
       : cacheStrategy;
 
   const { url: endpointUrl, hostHeader } = resolveEndpoint();
+  let boundSessionId = sessionId;
+  if (!boundSessionId) {
+    try {
+      boundSessionId = (await cookies()).get(SESSION_ID_COOKIE)?.value;
+    } catch {}
+  }
 
   const fetchOptions: RequestInit & {
     next?: { tags?: string[]; revalidate?: number };
@@ -72,6 +83,9 @@ export async function fetchGraphQL(
     headers: {
       "Content-Type": "application/json",
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...(boundSessionId ? { "X-BTL-Session-ID": boundSessionId } : {}),
+      ...(bootstrapProof ? { "X-BTL-Session-Bootstrap": bootstrapProof } : {}),
+      ...(previousAuthToken ? { "X-BTL-Previous-Authorization": `Bearer ${previousAuthToken}` } : {}),
       ...(hostHeader ? { Host: hostHeader } : {}),
     },
     body: JSON.stringify({ query, variables }),

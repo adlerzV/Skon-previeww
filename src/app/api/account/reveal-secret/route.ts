@@ -13,8 +13,6 @@ const REVEAL_MUTATION = `
   }
 `;
 
-const ALLOWED_FIELDS = ["cdkey", "email", "password", "battletag"];
-
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   if (!(await checkRateLimit(`reveal:${ip}`, { max: 20, windowMs: 5 * 60 * 1000 }))) {
@@ -29,16 +27,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const orderId = Number(body?.orderId);
     const itemId = Number(body?.itemId);
-    const fieldTypes: string[] = Array.isArray(body?.fieldTypes) ? body.fieldTypes : ["cdkey"];
-
-    if (!Number.isInteger(orderId) || !Number.isInteger(itemId)) {
+    const requestedFieldTypes: unknown = body?.fieldTypes ?? ["cdkey"];
+    if (
+      !Array.isArray(requestedFieldTypes) ||
+      requestedFieldTypes.length !== 1 ||
+      requestedFieldTypes[0] !== "cdkey"
+    ) {
       return NextResponse.json({ error: "پارامتر نامعتبر" }, { status: 400 });
     }
-    if (fieldTypes.some((f) => !ALLOWED_FIELDS.includes(f))) {
+
+    if (!Number.isInteger(orderId) || orderId <= 0 || !Number.isInteger(itemId) || itemId <= 0) {
       return NextResponse.json({ error: "پارامتر نامعتبر" }, { status: 400 });
     }
 
-    if (fieldTypes.includes("cdkey")) {
+    if (requestedFieldTypes[0] === "cdkey") {
       const data = await fetchGraphQL(REVEAL_MUTATION, { orderId, itemId, fieldType: "cdkey" }, [], "no-store", token);
       const values = data?.revealOrderSecret?.values;
       if (!Array.isArray(values) || values.length === 0) {
@@ -47,23 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ values });
     }
 
-    const results = await Promise.all(
-      fieldTypes.map(async (fieldType) => {
-        const data = await fetchGraphQL(REVEAL_MUTATION, { orderId, itemId, fieldType }, [], "no-store", token);
-        return { fieldType, value: data?.revealOrderSecret?.values?.[0] };
-      })
-    );
-
-    const fields: Record<string, string> = {};
-    for (const { fieldType, value } of results) {
-      if (typeof value === "string") fields[fieldType] = value;
-    }
-
-    if (Object.keys(fields).length === 0) {
-      return NextResponse.json({ error: "اطلاعاتی یافت نشد (شاید سفارش تکمیل/لغو شده و اطلاعات پاک شده باشد)" }, { status: 404 });
-    }
-
-    return NextResponse.json({ fields });
+    return NextResponse.json({ error: "پارامتر نامعتبر" }, { status: 400 });
   } catch (error) {
     console.error("Reveal secret error:", error);
     return NextResponse.json({ error: "خطا در ارتباط با سرور" }, { status: 500 });

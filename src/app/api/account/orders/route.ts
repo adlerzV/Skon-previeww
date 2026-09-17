@@ -4,7 +4,7 @@ import { fetchGraphQL } from "@/lib/graphql";
 import { CUSTOMER_ORDERS_QUERY } from "@/lib/graphql/auth";
 import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
 
-const ALL_STATUSES = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"];
+const ALL_STATUSES = ["PENDING", "PROCESSING", "ON_HOLD", "COMPLETED", "CANCELLED", "REFUNDED", "FAILED"];
 
 export async function GET(request: NextRequest) {
   const token = (await cookies()).get(AUTH_TOKEN_COOKIE)?.value;

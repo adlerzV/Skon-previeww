@@ -6,7 +6,7 @@ import { fetchGraphQL } from "@/lib/graphql";
 import { CUSTOMER_ORDERS_QUERY } from "@/lib/graphql/auth";
 import OrdersPaginated from "@/components/account/OrdersPaginated";
 
-const ALL_STATUSES = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"];
+const ALL_STATUSES = ["PENDING", "PROCESSING", "ON_HOLD", "COMPLETED", "CANCELLED", "REFUNDED", "FAILED"];
 
 export default async function OrdersView() {
   const user = await getCurrentUser();

@@ -11,7 +11,7 @@ import MissingCredentialsForm from "@/components/cart/MissingCredentialsForm";
 import { useToast } from "@/context/ToastContext";
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateQuantity, totalQuantity } = useCart();
+  const { cart, removeFromCart, updateQuantity, clearCart, totalQuantity } = useCart();
   const { showToast } = useToast();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -66,20 +66,36 @@ export default function CartPage() {
 
     setIsCheckingOut(true);
     try {
+      const checkoutItems = cart.map((item) => ({
+        productId: item.productId,
+        variationId: item.variationId,
+        quantity: item.quantity,
+        deliveryMethod: item.deliveryMethod,
+        region: item.region,
+        variationName: item.variationName,
+        customFields: item.customFields,
+      }));
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(JSON.stringify(checkoutItems))
+      );
+      const signature = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+      const stored = sessionStorage.getItem("btl_checkout_idempotency");
+      let idempotencyKey = "";
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as { signature?: string; key?: string };
+          if (parsed.signature === signature && parsed.key) idempotencyKey = parsed.key;
+        } catch {}
+      }
+      if (!idempotencyKey) {
+        idempotencyKey = crypto.randomUUID();
+        sessionStorage.setItem("btl_checkout_idempotency", JSON.stringify({ signature, key: idempotencyKey }));
+      }
       const res = await fetch("/api/checkout/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: cart.map((item) => ({
-            productId: item.productId,
-            variationId: item.variationId,
-            quantity: item.quantity,
-            deliveryMethod: item.deliveryMethod,
-            region: item.region,
-            variationName: item.variationName,
-            customFields: item.customFields,
-          })),
-        }),
+        body: JSON.stringify({ items: checkoutItems, idempotencyKey }),
       });
       const data = await res.json();
 
@@ -88,6 +104,15 @@ export default function CartPage() {
         return;
       }
 
+      if (typeof data?.redirectUrl !== "string" || !data.redirectUrl) {
+        setCheckoutError("لینک پرداخت از سرور دریافت نشد");
+        return;
+      }
+
+      sessionStorage.removeItem("btl_checkout_idempotency");
+      // The order has been accepted; remove the local cart and its credentials
+      // before leaving for WooCommerce payment.
+      clearCart();
       window.location.href = data.redirectUrl;
     } catch {
       setCheckoutError("خطا در ارتباط با سرور");

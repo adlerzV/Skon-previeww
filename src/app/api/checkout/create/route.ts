@@ -39,6 +39,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const items: CheckoutCartItem[] = Array.isArray(body?.items) ? body.items : [];
+    const idempotencyKey = typeof body?.idempotencyKey === "string" ? body.idempotencyKey.trim() : "";
+    if (!/^[A-Za-z0-9._:-]{8,100}$/.test(idempotencyKey)) {
+      return NextResponse.json({ error: "شناسه یکتای سفارش نامعتبر است" }, { status: 400 });
+    }
 
     if (items.length === 0) {
       return NextResponse.json({ error: "سبد خرید شما خالی است" }, { status: 400 });
@@ -82,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     const { data, errorMessage } = await fetchGraphQLWithErrors(
       SUBMIT_CUSTOMER_ORDER_MUTATION,
-      { lineItems, customerNote: "ثبت‌شده از فروشگاه Arena2Battle" },
+      { lineItems, customerNote: "ثبت‌شده از فروشگاه Arena2Battle", idempotencyKey },
       token
     );
 
