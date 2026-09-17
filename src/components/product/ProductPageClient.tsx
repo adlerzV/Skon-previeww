@@ -12,7 +12,9 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ProductNode, VariationCard } from "@/lib/graphql";
 import DeliveryAndPrice from "@/components/product/DeliveryAndPrice";
 import VariationSelector from "@/components/product/VariationSelector";
-import ProductStickyBar from "@/components/product/ProductStickyBar";
+import ProductStickyBar, { type DeliveryOption } from "@/components/product/ProductStickyBar";
+import { useProductDelivery, type DeliveryType } from "@/components/product/useProductDelivery";
+import { useToast } from "@/context/ToastContext";
 
 interface Props {
   product: ProductNode;
@@ -65,6 +67,9 @@ function isDeliveryAttr(name: string, values: string[]): boolean {
 function normalize(s: string): string {
   return s.replace(/ي/g, "ی").replace(/ك/g, "ک").toLowerCase();
 }
+function stripSizeSuffix(url: string): string {
+  return url.replace(/-\d+x\d+(?=\.[a-zA-Z0-9]+(?:[?#].*)?$)/, "");
+}
 
 function GalleryNavButton({
   direction,
@@ -103,6 +108,7 @@ export default function ProductPageClient({
   const heroRowRef = useRef<HTMLDivElement>(null);
   const hasScrolledThumbRef = useRef(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const { showToast } = useToast();
 
   const effectiveRegion =
     !activeRegion || activeRegion === "$undefined" || activeRegion === "undefined"
@@ -314,16 +320,26 @@ export default function ProductPageClient({
     };
   }, [variations, selectedAttrs, groupedAttributes, regionInfo, product]);
 
+  const purchase = useProductDelivery({
+    selectedVariation: combinedAggregateVar,
+    productId: product.databaseId,
+    productName: product.name,
+    selectedAttrs,
+    groupedAttributes,
+    regionInfo,
+  });
+
   const allGalleryImages = useMemo(() => {
     const seen = new Set<string>();
     const images: string[] = [];
 
     const add = (url: string | undefined | null) => {
       const trimmed = url?.trim();
-      if (trimmed && !seen.has(trimmed)) {
-        seen.add(trimmed);
-        images.push(trimmed);
-      }
+      if (!trimmed) return;
+      const dedupeKey = stripSizeSuffix(trimmed);
+      if (seen.has(dedupeKey)) return;
+      seen.add(dedupeKey);
+      images.push(trimmed);
     };
 
     add(product.imageLarge?.sourceUrl || product.image?.sourceUrl);
@@ -424,123 +440,146 @@ export default function ProductPageClient({
     [groupedAttributes, variations, regionInfo]
   );
 
+  const stickyDeliveryOptions: DeliveryOption[] = [
+    { value: "direct", label: "مستقیم", disabled: purchase.isDirectDisabled },
+    { value: "gift", label: "گیفت", disabled: purchase.isGiftDisabled },
+    { value: "code", label: "کد اصلی", disabled: purchase.isCodeDisabled },
+  ];
+
+  const stickyCtaLabel = purchase.isAddingToCart
+    ? "در حال پردازش..."
+    : purchase.isCartFull
+    ? "سبد پر است"
+    : "افزودن به سبد خرید";
+
+  const handleStickyCta = useCallback(() => {
+    if (purchase.isCartFull) return;
+
+    if (purchase.isFormValid()) {
+      purchase.handleAddToCart();
+      return;
+    }
+
+    heroRowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    showToast("لطفاً اطلاعات لازم را تکمیل کنید", "error");
+  }, [purchase, showToast]);
+
   return (
-    <div className="flex flex-col gap-12 w-full" dir="rtl">
+    <div className="flex flex-col gap-12 w-full animate-in fade-in duration-300" dir="rtl">
       <ProductStickyBar
         visible={showStickyBar}
         productName={product.name}
         groupedAttributes={groupedAttributes}
         selectedAttrs={selectedAttrs}
         onAttributeSelect={handleAttrSelect}
-        price={combinedAggregateVar?.parsedPrice ?? null}
-        regularPrice={typeof combinedAggregateVar?.parsedRegularPrice === "number" ? combinedAggregateVar.parsedRegularPrice : null}
-        onCtaClick={() => {
-          heroRowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
+        deliveryOptions={stickyDeliveryOptions}
+        selectedDelivery={purchase.deliveryType ?? ""}
+        onDeliverySelect={(value) => purchase.setDeliveryType(value as DeliveryType)}
+        price={purchase.currentPrice}
+        regularPrice={purchase.regularPrice}
+        ctaLabel={stickyCtaLabel}
+        ctaDisabled={purchase.isAddingToCart || purchase.isCartFull}
+        onCtaClick={handleStickyCta}
       />
 
       <div ref={heroRowRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 w-full items-stretch">
-        <div className="lg:col-span-4 flex flex-col gap-6 w-full">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl md:text-3xl font-black text-brand-active leading-tight">{product.name}</h1>
-              {wishlistSlot}
-            </div>
-            {product.shortNotify && (
-              <div className="mt-3 bg-brand-zard text-brand-menu text-xs px-3 py-2.5 font-medium border-r-4 border-brand-blue">
-                {product.shortNotify}
+        <div className="lg:col-span-4 w-full">
+          <div className="flex flex-col gap-6 lg:sticky lg:top-[96px]">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl md:text-3xl font-black text-brand-active leading-tight">{product.name}</h1>
+                {wishlistSlot}
               </div>
-            )}
-          </div>
-
-          <VariationSelector
-            groupedAttributes={groupedAttributes}
-            selectedAttrs={selectedAttrs}
-            onAttributeSelect={handleAttrSelect}
-            variations={variations}
-            regionInfo={regionInfo}
-          />
-
-          <div className="flex-1 flex flex-col min-h-0">
-            <DeliveryAndPrice
-              selectedVariation={combinedAggregateVar}
-              productId={product.databaseId}
-              productName={product.name}
-              selectedAttrs={selectedAttrs}
-              groupedAttributes={groupedAttributes}
-              regionInfo={regionInfo}
-            />
-          </div>
-        </div>
-        <div className="lg:col-span-8 flex flex-col gap-6 w-full">
-          <div className="flex flex-col sm:flex-row sm:items-stretch gap-3 w-full">
-            <div className="relative w-full sm:flex-1 aspect-[16/9] bg-brand-surface overflow-hidden border border-brand-surface_hover shadow-lg group">
-              <Image
-                src={displayImage}
-                alt={product.name}
-                fill
-                priority
-                fetchPriority="high"
-                quality={80}
-                className="object-cover transition-opacity duration-300"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 92vw, 58vw"
-              />
-              {allGalleryImages.length > 1 && (
-                <>
-                  <GalleryNavButton
-                    direction="prev"
-                    disabled={currentIndex === 0}
-                    onClick={() => setSelectedGalleryImage(allGalleryImages[currentIndex - 1])}
-                  />
-                  <GalleryNavButton
-                    direction="next"
-                    disabled={currentIndex === allGalleryImages.length - 1}
-                    onClick={() => setSelectedGalleryImage(allGalleryImages[currentIndex + 1])}
-                  />
-                </>
+              {product.shortNotify && (
+                <div className="mt-3 bg-brand-zard text-brand-menu text-xs px-3 py-2.5 font-medium border-r-4 border-brand-blue">
+                  {product.shortNotify}
+                </div>
               )}
             </div>
 
-            {allGalleryImages.length > 1 && (
-              <div className="w-full sm:w-[96px] lg:w-[108px] shrink-0 overflow-x-auto sm:overflow-x-visible sm:overflow-y-auto scrollbar-hide py-1 sm:py-0">
-                <div className="flex sm:flex-col gap-2.5 w-max sm:w-full">
-                  {allGalleryImages.map((imgUrl, idx) => (
-                    <button
-                      key={`${imgUrl}-${idx}`}
-                      ref={idx === currentIndex ? activeThumbRef : undefined}
-                      type="button"
-                      onClick={() => setSelectedGalleryImage(imgUrl)}
-                      className={`relative w-[86px] sm:w-full aspect-video flex-shrink-0 overflow-hidden border transition-all duration-300 ${
-                        idx === currentIndex
-                          ? "border-brand-blue opacity-100 ring-2 ring-brand-blue/60 shadow-[0_0_12px_rgba(0,116,224,0.3)]"
-                          : "border-brand-surface_hover opacity-40 hover:opacity-80"
-                      }`}
-                      aria-label={`تصویر ${idx + 1}`}
-                    >
-                      <Image
-                        src={imgUrl}
-                        alt={`گالری ${idx + 1}`}
-                        fill
-                        loading="lazy"
-                        sizes="(max-width: 640px) 86px, 108px"
-                        quality={60}
-                        className="object-cover"
-                      />
-                    </button>
-                  ))}
+            <VariationSelector
+              groupedAttributes={groupedAttributes}
+              selectedAttrs={selectedAttrs}
+              onAttributeSelect={handleAttrSelect}
+              variations={variations}
+              regionInfo={regionInfo}
+            />
+
+            <DeliveryAndPrice selectedVariation={combinedAggregateVar} purchase={purchase} />
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 w-full">
+          <div className="flex flex-col gap-6 lg:sticky lg:top-[96px]">
+            <div className="flex flex-col sm:flex-row sm:items-stretch gap-3 w-full">
+              <div className="relative w-full sm:flex-1 aspect-[16/9] bg-brand-surface overflow-hidden border border-brand-surface_hover shadow-lg group">
+                <Image
+                  src={displayImage}
+                  alt={product.name}
+                  fill
+                  priority
+                  fetchPriority="high"
+                  quality={80}
+                  className="object-cover transition-opacity duration-300"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 92vw, 58vw"
+                />
+                {allGalleryImages.length > 1 && (
+                  <>
+                    <GalleryNavButton
+                      direction="prev"
+                      disabled={currentIndex === 0}
+                      onClick={() => setSelectedGalleryImage(allGalleryImages[currentIndex - 1])}
+                    />
+                    <GalleryNavButton
+                      direction="next"
+                      disabled={currentIndex === allGalleryImages.length - 1}
+                      onClick={() => setSelectedGalleryImage(allGalleryImages[currentIndex + 1])}
+                    />
+                  </>
+                )}
+              </div>
+
+              {allGalleryImages.length > 1 && (
+                <div className="w-full sm:w-[96px] lg:w-[108px] shrink-0 overflow-x-auto sm:overflow-x-visible sm:overflow-y-auto scrollbar-hide py-1 sm:py-0">
+                  <div className="flex sm:flex-col gap-2.5 w-max sm:w-full">
+                    {allGalleryImages.map((imgUrl, idx) => (
+                      <button
+                        key={`${imgUrl}-${idx}`}
+                        ref={idx === currentIndex ? activeThumbRef : undefined}
+                        type="button"
+                        onClick={() => setSelectedGalleryImage(imgUrl)}
+                        className={`relative w-[86px] sm:w-full aspect-video flex-shrink-0 overflow-hidden border transition-all duration-300 ${
+                          idx === currentIndex
+                            ? "border-brand-blue opacity-100 ring-2 ring-brand-blue/60 shadow-[0_0_12px_rgba(0,116,224,0.3)]"
+                            : "border-brand-surface_hover opacity-40 hover:opacity-80"
+                        }`}
+                        aria-label={`تصویر ${idx + 1}`}
+                      >
+                        <Image
+                          src={imgUrl}
+                          alt={`گالری ${idx + 1}`}
+                          fill
+                          loading="lazy"
+                          sizes="(max-width: 640px) 86px, 108px"
+                          quality={60}
+                          className="object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {product.shortDescription && (
+              <div className="bg-brand-menu p-6 border border-brand-surface_hover">
+                <div
+                  className="text-brand-surface_m text-sm leading-8 prose prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: product.shortDescription }}
+                />
               </div>
             )}
           </div>
-
-          {product.shortDescription && (
-            <div className="bg-brand-menu p-6 border border-brand-surface_hover">
-              <div
-                className="text-brand-surface_m text-sm leading-8 prose prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: product.shortDescription }}
-              />
-            </div>
-          )}
         </div>
       </div>
 

@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { VariationCard } from "@/lib/graphql";
-import { useCart } from "@/context/CartContext";
 import { User, Gift, FileCheck, Eye, EyeOff, ClipboardPaste } from "lucide-react";
 import { PriceDisplay } from "./PriceDisplay";
 import { useToast } from "@/context/ToastContext";
 import ConfettiBurst from "@/components/ui/ConfettiBurst";
+import type { ProductPurchaseState, DeliveryType } from "./useProductDelivery";
 
 const BATTLETAG_REGEX = /^[A-Za-z\u0600-\u06FF0-9]{2,12}#\d{4,7}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function DirectForm({
   email,
@@ -162,87 +161,32 @@ function CodeInfo() {
   );
 }
 
-type DeliveryType = "direct" | "gift" | "code";
-
-function getDefaultDelivery(v: VariationCard): DeliveryType | null {
-  const isDirectAvailable = v.parsedPrice != null;
-  const isGiftAvailable = v.parsedGiftPrice != null && v.parsedGiftPrice !== "disabled";
-  const isCodeAvailable =
-    v.parsedCodePrice != null &&
-    v.parsedCodePrice !== "disabled" &&
-    (typeof v.codeStockCount !== "number" || v.codeStockCount > 0);
-
-  if (isDirectAvailable) return "direct";
-  if (isGiftAvailable) return "gift";
-  if (isCodeAvailable) return "code";
-  return null;
-}
-
-function getPrice(v: VariationCard, type: DeliveryType): number | null {
-  switch (type) {
-    case "direct":
-      return v.parsedPrice ?? null;
-    case "gift":
-      return typeof v.parsedGiftPrice === "number" ? v.parsedGiftPrice : null;
-    case "code":
-      return typeof v.parsedCodePrice === "number" ? v.parsedCodePrice : null;
-  }
-}
-
-function getRegularPrice(v: VariationCard, type: DeliveryType): number | null {
-  switch (type) {
-    case "direct":
-      return v.parsedRegularPrice ?? null;
-    case "gift":
-      return typeof v.parsedGiftRegularPrice === "number"
-        ? v.parsedGiftRegularPrice
-        : null;
-    case "code":
-      return typeof v.parsedCodeRegularPrice === "number"
-        ? v.parsedCodeRegularPrice
-        : null;
-  }
-}
-
 interface DeliveryAndPriceProps {
   selectedVariation: VariationCard | null;
-  productId: number;
-  productName: string;
-  selectedAttrs: Record<string, string>;
-  groupedAttributes: { name: string; values: any[] }[];
-  regionInfo: { name: string; value: string } | null;
+  purchase: ProductPurchaseState;
 }
 
-export default function DeliveryAndPrice({
-  selectedVariation,
-  productId,
-  productName,
-  selectedAttrs,
-  groupedAttributes,
-  regionInfo,
-}: DeliveryAndPriceProps) {
-  const { addToCart, isCartFull } = useCart();
-  const { showToast } = useToast();
-
-  const [deliveryType, setDeliveryType] = useState<DeliveryType | null>(() =>
-    selectedVariation ? getDefaultDelivery(selectedVariation) : null
-  );
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [battleTag, setBattleTag] = useState("");
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [burstKey, setBurstKey] = useState(0);
-
-  useEffect(() => {
-    if (!selectedVariation) {
-      setDeliveryType(null);
-      return;
-    }
-    setDeliveryType(getDefaultDelivery(selectedVariation));
-    setEmail("");
-    setPassword("");
-    setBattleTag("");
-  }, [selectedVariation]);
+export default function DeliveryAndPrice({ selectedVariation, purchase }: DeliveryAndPriceProps) {
+  const {
+    deliveryType,
+    setDeliveryType,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    battleTag,
+    setBattleTag,
+    isAddingToCart,
+    burstKey,
+    isDirectDisabled,
+    isGiftDisabled,
+    isCodeDisabled,
+    currentPrice,
+    regularPrice,
+    isFormValid,
+    handleAddToCart,
+    isCartFull,
+  } = purchase;
 
   if (!selectedVariation) {
     return (
@@ -251,65 +195,6 @@ export default function DeliveryAndPrice({
       </div>
     );
   }
-
-  const isDirectDisabled = selectedVariation.parsedPrice == null;
-  const isGiftDisabled =
-    selectedVariation.parsedGiftPrice == null ||
-    selectedVariation.parsedGiftPrice === "disabled";
-  const isCodeDisabled =
-    selectedVariation.parsedCodePrice == null ||
-    selectedVariation.parsedCodePrice === "disabled" ||
-    (typeof selectedVariation.codeStockCount === "number" && selectedVariation.codeStockCount <= 0);
-
-  const currentPrice = deliveryType ? getPrice(selectedVariation, deliveryType) : null;
-  const regularPrice = deliveryType ? getRegularPrice(selectedVariation, deliveryType) : null;
-
-  const isFormValid = (): boolean => {
-    if (!deliveryType) return false;
-    if (deliveryType === "direct") return EMAIL_REGEX.test(email.trim()) && password.trim().length > 0;
-    if (deliveryType === "gift") return BATTLETAG_REGEX.test(battleTag.trim());
-    if (deliveryType === "code") return true;
-    return false;
-  };
-
-const handleAddToCart = () => {
-    if (!isFormValid() || !deliveryType || !selectedVariation) return;
-    setIsAddingToCart(true);
-    const regionValue = regionInfo ? selectedAttrs[regionInfo.name] : undefined;
-    const traitValues = groupedAttributes
-      .map((g) => selectedAttrs[g.name])
-      .filter(Boolean);
-    const variationNameValue = traitValues.length > 0 ? traitValues.join(" - ") : undefined;
-    const variationIdValue =
-      selectedVariation.databaseId !== productId ? selectedVariation.databaseId : undefined;
-
-    const added = addToCart({
-      productId,
-      variationId: variationIdValue,
-      name: productName,
-      price: currentPrice || 0,
-      regularPrice: regularPrice || undefined,
-      deliveryMethod: deliveryType,
-      region: regionValue,
-      variationName: variationNameValue,
-      maxQuantity:
-        deliveryType === "code" && typeof selectedVariation.codeStockCount === "number"
-          ? selectedVariation.codeStockCount
-          : undefined,
-      customFields:
-        deliveryType === "gift"
-          ? { battleTag }
-          : deliveryType === "direct"
-          ? { email, password }
-          : undefined,
-    });
-
-    if (added) {
-      showToast("به سبد خرید اضافه شد 🛒");
-      setBurstKey((k) => k + 1);
-    }
-    setTimeout(() => setIsAddingToCart(false), 1000);
-  };
 
   const deliveryButtons: {
     type: DeliveryType;
@@ -358,7 +243,7 @@ const handleAddToCart = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-2 h-full">
+    <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-2">
         <span className="text-brand-surface_m text-[13px] font-bold uppercase tracking-wide">
           مسیر تحویل محصول:
@@ -412,7 +297,7 @@ const handleAddToCart = () => {
         </div>
       )}
 
-      <div className="mt-auto flex flex-col gap-2">
+      <div className="flex flex-col gap-2 mt-2">
         <div className="flex justify-between items-center bg-brand-surface p-4 border border-brand-surface_hover">
           <span className="text-sm text-brand-surface_m font-medium">مبلغ نهایی:</span>
           {deliveryType === null ? (

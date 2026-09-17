@@ -7,7 +7,6 @@
     --background: #15171e;
     --foreground: #f8f5f9;
   }
-
   html {
     scroll-behavior: smooth;
     overflow-x: clip;
@@ -22,7 +21,6 @@
   body {
     background-color: #15171e;
     color: #c2c2c4;
-    overflow-x: clip;
   }
   * {
     border-radius: 5px;

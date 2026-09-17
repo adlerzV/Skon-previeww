@@ -24,6 +24,8 @@ interface ProductStickyBarProps {
   onDeliverySelect?: (value: string) => void;
   price: number | null;
   regularPrice: number | null;
+  ctaLabel: string;
+  ctaDisabled?: boolean;
   onCtaClick: () => void;
 }
 
@@ -38,13 +40,15 @@ export default function ProductStickyBar({
   onDeliverySelect,
   price,
   regularPrice,
+  ctaLabel,
+  ctaDisabled = false,
   onCtaClick,
 }: ProductStickyBarProps) {
   return (
     <div
       dir="rtl"
       aria-hidden={!visible}
-      className={`fixed top-0 inset-x-0 z-[9500] bg-[#15171e] border-b border-brand-surface_hover shadow-[0_8px_20px_rgba(0,0,0,0.6)] transition-transform duration-200 ease-out ${
+      className={`fixed top-[60px] lg:top-[80px] inset-x-0 z-[9500] bg-[#15171e] border-b border-brand-surface_hover shadow-[0_8px_20px_rgba(0,0,0,0.6)] transition-transform duration-200 ease-out ${
         visible ? "translate-y-0 opacity-100 pointer-events-auto" : "-translate-y-full opacity-0 pointer-events-none"
       }`}
     >
@@ -103,9 +107,10 @@ export default function ProductStickyBar({
           <button
             type="button"
             onClick={onCtaClick}
-            className="bg-brand-blue hover:bg-[#0062d1] text-white text-xs font-bold px-4 md:px-5 py-2 md:py-2.5 whitespace-nowrap transition-colors"
+            disabled={ctaDisabled}
+            className="bg-brand-blue hover:bg-[#0062d1] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold px-4 md:px-5 py-2 md:py-2.5 whitespace-nowrap transition-colors"
           >
-            مشاهده و خرید
+            {ctaLabel}
           </button>
         </div>
       </div>
