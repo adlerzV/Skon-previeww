@@ -1,5 +1,4 @@
-import AdminModulePlaceholder from "@/components/admin/AdminModulePlaceholder";
-
-export default function Page() {
-  return <AdminModulePlaceholder title="Tickets" phase="Phase 2" />;
-}
+import AdminTicketsClient from "@/components/admin/AdminTicketsClient";
+import { getAdminTickets, requireAdmin } from "@/lib/admin/server";
+export const dynamic = "force-dynamic";
+export default async function Page(){await requireAdmin("tickets.read");const data=await getAdminTickets({status:"open"});return <AdminTicketsClient initial={data}/>}

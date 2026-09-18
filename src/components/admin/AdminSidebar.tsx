@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ADMIN_PERMISSIONS, type AdminPermission } from "@/lib/admin/permissions";
 import { useLogout } from "@/lib/hooks/useLogout";
 import UserAvatar from "@/components/ui/UserAvatar";
+import AdminNotificationsBell from "./AdminNotificationsBell";
 
 interface Props {
   user: { name: string; email: string; avatarUrl: string | null };
@@ -46,6 +47,9 @@ export default function AdminSidebar({ user, permissions }: Props) {
           <X size={18} />
         </button>
       </div>
+        <div className="px-3 pb-3">
+          <AdminNotificationsBell />
+        </div>
 
       <div className="px-5 py-4 border-b border-brand-surface_hover">
         <div className="text-[11px] uppercase tracking-[0.18em] font-black text-brand-blue">BATTLEEE ADMIN</div>

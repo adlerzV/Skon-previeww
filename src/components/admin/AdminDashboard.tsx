@@ -8,7 +8,7 @@ import type { AdminPermission } from "@/lib/admin/permissions";
 interface AdminSummaryData {
   user: { id: string; databaseId: number; name: string; email: string; avatarUrl: string | null };
   permissions: string[];
-  summary: { openTicketsCount: number; pendingReviewsCount: number };
+  summary: { openTicketsCount: number; pendingReviewsCount: number; processingOrdersCount: number; unreadNotificationsCount: number };
   tickets: Array<{ id: string; databaseId: number; title: string; date?: string; linkedOrderId?: number | null; customerName?: string | null }>;
 }
 
@@ -57,8 +57,8 @@ export default function AdminDashboard({ initialData }: { initialData: AdminSumm
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           <AttentionCard href="/admin/tickets" count={data.summary.openTicketsCount} label="تیکت باز" icon={<LifeBuoy size={18} />} permission="tickets.read" permissions={data.permissions} />
           <AttentionCard href="/admin/reviews" count={data.summary.pendingReviewsCount} label="دیدگاه در انتظار بررسی" icon={<ClipboardCheck size={18} />} permission="reviews.moderate" permissions={data.permissions} />
-          <InfoCard label="Orders" value="Phase 2" />
-          <InfoCard label="Engine Health" value="Phase 5" />
+          <InfoCard label="Processing Orders" value={data.summary.processingOrdersCount.toLocaleString("fa-IR")} />
+          <InfoCard label="Admin Notifications" value={data.summary.unreadNotificationsCount.toLocaleString("fa-IR")} />
         </div>
       </section>
 
@@ -90,14 +90,14 @@ export default function AdminDashboard({ initialData }: { initialData: AdminSumm
 
         <div className="bg-brand-surface border border-brand-surface_hover p-5 min-h-[320px]">
           <div className="text-sm font-black text-white">Phase 1 Foundation</div>
-          <div className="text-[11px] text-brand-m_khonsa mt-1 mb-4">این صفحه عمداً فقط قابلیت‌های آماده‌ی Engine را نمایش می‌دهد.</div>
+          <div className="text-[11px] text-brand-m_khonsa mt-1 mb-4">این داشبورد روی داده‌های عملیاتی واقعی Engine سوار است؛ Gold و Engine infrastructure در فازهای بعد تکمیل می‌شوند.</div>
           <div className="space-y-2">
             <StatusRow label="Admin authentication" value="Ready" />
             <StatusRow label="Session binding" value="Ready" />
             <StatusRow label="Granular permissions" value={`${data.permissions.length} permissions`} />
             <StatusRow label="Admin BFF routes" value="Ready" />
             <StatusRow label="Audit storage" value="Ready" />
-            <StatusRow label="Orders / Fulfillment" value="Phase 2" />
+            <StatusRow label="Orders / Fulfillment" value="Ready" />
             <StatusRow label="Gold Board" value="Phase 4" />
           </div>
         </div>
