@@ -267,7 +267,8 @@ export async function getHomeFeaturedProducts(activeRegion: string = "eu") {
     { regionSlug: activeRegion },
     ["products", "home", "home-featured"],
     {
-      type: "no-store",
+      type: "revalidate",
+      seconds: 1800,
     }
   );
 
@@ -293,7 +294,8 @@ export async function getHomeLatestProducts(activeRegion: string = "eu") {
     { regionSlug: activeRegion },
     ["products", "home", "home-latest"],
     {
-      type: "no-store",
+      type: "revalidate",
+      seconds: 1800,
     }
   );
 

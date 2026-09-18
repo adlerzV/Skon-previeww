@@ -72,12 +72,12 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        revalidateTag(t, { expire: 0 });
+        revalidateTag(t, { expire: 1800 });
 
         const encoded = encodeURIComponent(t);
 
         if (encoded !== t) {
-          revalidateTag(encoded, { expire: 0 });
+          revalidateTag(encoded, { expire: 1800 });
         }
 
         if (
