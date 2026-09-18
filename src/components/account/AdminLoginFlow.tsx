@@ -1,20 +1,33 @@
 // src/components/account/AdminLoginFlow.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Loader2, User, Lock, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import AdminTotpGate from "./steps/AdminTotpGate";
 
 type Step = { name: "credentials" } | { name: "admin-totp"; pendingTicket: string; requiresSetup: boolean };
 
 export default function AdminLoginFlow() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>({ name: "credentials" });
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/admin/context", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        if (active) router.replace("/admin");
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

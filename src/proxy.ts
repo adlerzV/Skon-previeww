@@ -98,7 +98,7 @@ async function applyAuthRefresh(request: NextRequest): Promise<string | null> {
   const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
   const sessionId = request.cookies.get("a2b_session_id")?.value;
 
-  if (!refreshToken || !needsRefresh(authToken)) return null;
+  if (!authToken || !refreshToken || !needsRefresh(authToken)) return null;
 
   const newToken = await refreshAuthToken(refreshToken, sessionId, authToken);
   if (newToken) {
