@@ -255,63 +255,55 @@ export async function getHomeHeroData() {
 }
 
 export async function getHomeFeaturedProducts(activeRegion: string = "eu") {
-  const cached = unstable_cache(
-    async () => {
-      const data = await fetchGraphQL(
-        `
-          ${PRODUCT_CARD_FIELDS}
-          query GetHomeFeatured($regionSlug: String) {
-            featuredProducts: products(first: 12, where: { featured: true, status: "PUBLISH", regionSlug: $regionSlug }) {
-              nodes { ...ProductCardFields }
-            }
-          }
-        `,
-        { regionSlug: activeRegion },
-        ["products", "home", "home-featured"],
-        "force-cache"
-      );
-
-      if (!data) return [] as ProductNode[];
-
-      return formatProducts(data.featuredProducts?.nodes ?? [], true, activeRegion).filter(
-        (p) => p.isAvailableInRegion !== false
-      );
-    },
-    ["home-featured-products", activeRegion],
-    { tags: ["products", "home", "home-featured"], revalidate: false }
+  const data = await fetchGraphQL(
+    `
+      ${PRODUCT_CARD_FIELDS}
+      query GetHomeFeatured($regionSlug: String) {
+        featuredProducts: products(first: 12, where: { featured: true, status: "PUBLISH", regionSlug: $regionSlug }) {
+          nodes { ...ProductCardFields }
+        }
+      }
+    `,
+    { regionSlug: activeRegion },
+    ["products", "home", "home-featured"],
+    {
+      type: "no-store",
+    }
   );
 
-  return cached();
+  if (!data) return [] as ProductNode[];
+
+  return formatProducts(
+    data.featuredProducts?.nodes ?? [],
+    true,
+    activeRegion
+  ).filter((p) => p.isAvailableInRegion !== false);
 }
 
 export async function getHomeLatestProducts(activeRegion: string = "eu") {
-  const cached = unstable_cache(
-    async () => {
-      const data = await fetchGraphQL(
-        `
-          ${PRODUCT_CARD_FIELDS}
-          query GetHomeLatest($regionSlug: String) {
-            latestProducts: products(first: 10, where: { status: "PUBLISH", orderby: { field: DATE, order: DESC }, regionSlug: $regionSlug }) {
-              nodes { ...ProductCardFields }
-            }
-          }
-        `,
-        { regionSlug: activeRegion },
-        ["products", "home", "home-latest"],
-        "force-cache"
-      );
-
-      if (!data) return [] as ProductNode[];
-
-      return formatProducts(data.latestProducts?.nodes ?? [], true, activeRegion).filter(
-        (p) => p.isAvailableInRegion !== false
-      );
-    },
-    ["home-latest-products", activeRegion],
-    { tags: ["products", "home", "home-latest"], revalidate: false }
+  const data = await fetchGraphQL(
+    `
+      ${PRODUCT_CARD_FIELDS}
+      query GetHomeLatest($regionSlug: String) {
+        latestProducts: products(first: 10, where: { status: "PUBLISH", orderby: { field: DATE, order: DESC }, regionSlug: $regionSlug }) {
+          nodes { ...ProductCardFields }
+        }
+      }
+    `,
+    { regionSlug: activeRegion },
+    ["products", "home", "home-latest"],
+    {
+      type: "no-store",
+    }
   );
 
-  return cached();
+  if (!data) return [] as ProductNode[];
+
+  return formatProducts(
+    data.latestProducts?.nodes ?? [],
+    true,
+    activeRegion
+  ).filter((p) => p.isAvailableInRegion !== false);
 }
 
 export async function getHeaderBlogCategories() {
