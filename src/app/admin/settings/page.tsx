@@ -1,5 +1,5 @@
-import AdminModulePlaceholder from "@/components/admin/AdminModulePlaceholder";
+import AdminAccountSettings from "@/components/admin/AdminAccountSettings";
 
 export default function Page() {
-  return <AdminModulePlaceholder title="Settings" phase="Phase 5" />;
+  return <AdminAccountSettings />;
 }

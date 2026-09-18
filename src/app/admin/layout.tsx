@@ -1,20 +1,12 @@
 import type { ReactNode } from "react";
-import { requireAdmin } from "@/lib/admin/server";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import AdminShell from "@/components/admin/AdminShell";
-
-export const dynamic = "force-dynamic";
+import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const { user, permissions } = await requireAdmin();
+  const cookieStore = await cookies();
+  if (!cookieStore.get(AUTH_TOKEN_COOKIE)?.value) redirect("/admin-login");
 
-  return (
-    <div className="min-h-[100dvh] bg-brand-bg" dir="rtl">
-      <AdminShell
-        user={{ name: user.name, email: user.email, avatarUrl: user.avatarUrl }}
-        permissions={permissions}
-      >
-        {children}
-      </AdminShell>
-    </div>
-  );
+  return <AdminShell>{children}</AdminShell>;
 }
