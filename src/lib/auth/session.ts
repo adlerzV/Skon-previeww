@@ -14,6 +14,7 @@ export interface SessionUser {
   avatarUrl: string | null;
   isStaff: boolean;
   hasManualPassword: boolean;
+  adminPermissions: string[];
 }
 
 export interface HeaderViewerData {
@@ -31,6 +32,7 @@ const VIEWER_QUERY = `
       avatarUrl
       isStaff
       hasManualPassword
+      adminPermissions
       activeSessionValid(sessionId: $sessionId)
     }
   }
@@ -79,6 +81,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       avatarUrl,
       isStaff: Boolean(viewer.isStaff),
       hasManualPassword: Boolean(viewer.hasManualPassword),
+      adminPermissions: Array.isArray(viewer.adminPermissions) ? viewer.adminPermissions.filter((permission: unknown): permission is string => typeof permission === "string") : [],
     } as SessionUser;
   } catch {
     return null;

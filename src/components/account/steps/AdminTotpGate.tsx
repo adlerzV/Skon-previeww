@@ -53,10 +53,10 @@ export default function AdminTotpGate({
   const [smsError, setSmsError] = useState("");
 
   const goToAccount = useCallback(() => {
-    if (pathname === "/my-account") {
+    if (pathname === "/admin") {
       router.refresh();
     } else {
-      router.push("/my-account");
+      router.push("/admin");
     }
   }, [pathname, router]);
 

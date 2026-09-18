@@ -5,7 +5,7 @@ import { ADMIN_OPEN_TICKETS_QUERY } from "@/lib/graphql/auth";
 
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user || !user.isStaff) {
+  if (!user || !user.isStaff || !user.adminPermissions.includes("tickets.read")) {
     return NextResponse.json({ error: "دسترسی غیرمجاز" }, { status: 403 });
   }
 

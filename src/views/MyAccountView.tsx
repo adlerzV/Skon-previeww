@@ -1,14 +1,12 @@
 import { ComponentProps } from "react";
+import { redirect } from "next/navigation";
 import { getCurrentUser, getAuthToken } from "@/lib/auth/session";
 import { fetchGraphQL } from "@/lib/graphql";
 import {
   DASHBOARD_SUMMARY_QUERY,
-  ADMIN_DASHBOARD_SUMMARY_QUERY,
-  ADMIN_OPEN_TICKETS_QUERY,
 } from "@/lib/graphql/auth";
 import UnifiedLoginFlow from "@/components/account/UnifiedLoginFlow";
 import AccountDashboard from "@/components/account/AccountDashboard";
-import AdminDashboard from "@/components/account/AdminDashboard";
 
 const SUCCESSFUL_STATUSES = new Set(["PROCESSING", "COMPLETED"]);
 
@@ -16,21 +14,6 @@ type AccountDashboardProps = ComponentProps<typeof AccountDashboard>;
 type OrderSummary = AccountDashboardProps["recentOrders"][number];
 type TicketSummary = AccountDashboardProps["recentTickets"][number];
 
-const resolveWpAdminUrl = (): string | null => {
-  const envUrl = process.env.NEXT_PUBLIC_WORDPRESS_API_URL;
-  if (!envUrl) return null;
-
-  try {
-    const parsed = new URL(envUrl);
-    const basePath = parsed.pathname.replace(/\/graphql\/?$/, "");
-    parsed.pathname = `${basePath}/wp-admin`.replace(/\/+/g, "/");
-    parsed.search = "";
-    parsed.hash = "";
-    return parsed.toString();
-  } catch {
-    return null;
-  }
-};
 
 export default async function MyAccountView() {
   const user = await getCurrentUser();
@@ -43,36 +26,7 @@ export default async function MyAccountView() {
   const authToken = token || undefined;
 
   if (user.isStaff) {
-    try {
-      const [summaryData, ticketsData] = await Promise.all([
-        fetchGraphQL(ADMIN_DASHBOARD_SUMMARY_QUERY, {}, [], "no-store", authToken),
-        fetchGraphQL(ADMIN_OPEN_TICKETS_QUERY, { first: 10 }, [], "no-store", authToken),
-      ]);
-
-      return (
-        <div className="mx-auto h-full">
-          <AdminDashboard
-            user={user}
-            openTicketsCount={summaryData?.adminOpenTicketsCount ?? 0}
-            pendingReviewsCount={summaryData?.pendingReviewsCount ?? 0}
-            initialOpenTickets={ticketsData?.adminOpenTickets ?? []}
-            wpAdminUrl={resolveWpAdminUrl()}
-          />
-        </div>
-      );
-    } catch {
-      return (
-        <div className="mx-auto h-full">
-          <AdminDashboard
-            user={user}
-            openTicketsCount={0}
-            pendingReviewsCount={0}
-            initialOpenTickets={[]}
-            wpAdminUrl={resolveWpAdminUrl()}
-          />
-        </div>
-      );
-    }
+    redirect("/admin");
   }
 
   try {
