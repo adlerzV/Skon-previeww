@@ -37,7 +37,7 @@ export async function requireAdmin(permission?: AdminPermission): Promise<{ user
 
 async function adminFetch<T = any>(query: string, variables: Record<string, unknown> = {}) {
   const token = (await getAuthToken()) || undefined;
-  return fetchGraphQL<T>(query, variables, [], "no-store", token);
+  return fetchGraphQL(query, variables, [], "no-store", token) as T;
 }
 
 export async function getAdminSummary() {
