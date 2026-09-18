@@ -14,7 +14,13 @@ export async function POST(request: NextRequest) {
     }
 
     const ip = getClientIp(request);
-    if (!(await checkRateLimit(`revalidate:${ip}`, { max: 120, windowMs: 60 * 1000 }))) {
+
+    if (
+      !(await checkRateLimit(`revalidate:${ip}`, {
+        max: 120,
+        windowMs: 60 * 1000,
+      }))
+    ) {
       return NextResponse.json(
         { message: "Too many requests" },
         { status: 429, headers: { "Retry-After": "60" } }
@@ -29,13 +35,24 @@ export async function POST(request: NextRequest) {
     }
 
     const requestedTags = Array.isArray(tag) ? tag : [tag];
+
     if (requestedTags.length > MAX_TAGS_PER_REQUEST) {
-      return NextResponse.json({ message: "Too many tags" }, { status: 413 });
+      return NextResponse.json(
+        { message: "Too many tags" },
+        { status: 413 }
+      );
     }
-    const tags: string[] = requestedTags
-      .filter((t: unknown): t is string => typeof t === "string" && t.trim() !== "");
+
+    const tags: string[] = requestedTags.filter(
+      (t: unknown): t is string =>
+        typeof t === "string" && t.trim() !== ""
+    );
+
     if (tags.length !== requestedTags.length || tags.length === 0) {
-      return NextResponse.json({ message: "Invalid tag list" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Invalid tag list" },
+        { status: 400 }
+      );
     }
 
     const revalidated: string[] = [];
@@ -55,11 +72,12 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        revalidateTag(t, "default");
+        revalidateTag(t, { expire: 0 });
 
         const encoded = encodeURIComponent(t);
+
         if (encoded !== t) {
-          revalidateTag(encoded, "default");
+          revalidateTag(encoded, { expire: 0 });
         }
 
         revalidated.push(t);
@@ -71,7 +89,12 @@ export async function POST(request: NextRequest) {
 
     if (failed.length > 0) {
       return NextResponse.json(
-        { revalidated, failed, pathRevalidated, now: Date.now() },
+        {
+          revalidated,
+          failed,
+          pathRevalidated,
+          now: Date.now(),
+        },
         { status: 500 }
       );
     }
@@ -83,6 +106,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Revalidation error:", error);
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+
+    return NextResponse.json(
+      { message: "Server error" },
+      { status: 500 }
+    );
   }
 }
