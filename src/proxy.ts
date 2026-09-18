@@ -141,7 +141,8 @@ export async function proxy(request: NextRequest) {
   const isNonRegionRoute =
     pathname.startsWith("/my-account") ||
     pathname.startsWith("/cart") ||
-    pathname.startsWith("/admin-login");
+    pathname.startsWith("/admin-login") ||
+    pathname.startsWith("/admin");
 
   if (isNonRegionRoute) {
     const response = NextResponse.next({ request });
