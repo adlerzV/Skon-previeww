@@ -80,6 +80,14 @@ export async function POST(request: NextRequest) {
           revalidateTag(encoded, { expire: 0 });
         }
 
+        if (
+          (t === "home-featured" || t === "home-latest") &&
+          !pathRevalidated
+        ) {
+          revalidatePath("/[region]", "page");
+          pathRevalidated = true;
+        }
+
         revalidated.push(t);
       } catch (err) {
         console.error(`Failed to revalidate tag "${t}":`, err);
