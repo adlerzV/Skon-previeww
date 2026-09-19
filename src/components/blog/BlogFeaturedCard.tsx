@@ -21,6 +21,7 @@ function BlogFeaturedCard({ post, region }: BlogFeaturedCardProps) {
 
   return (
     <Link
+      prefetch={false}
       href={`/${region}/blog/${categorySlug}/${post.slug}`}
       className="group flex flex-col bg-brand-surface border border-white/5 hover:border-brand-blue/40 rounded-xl overflow-hidden transition-colors h-full"
     >

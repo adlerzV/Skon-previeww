@@ -1,8 +1,7 @@
+import { DEFAULT_REGION } from "@/lib/regions";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 
-export default async function RootPage() {
-  const cookieStore = await cookies();
-  const activeRegion = cookieStore.get("store_region")?.value || "eu";
-  redirect(`/${activeRegion}`);
+export default function RootPage() {
+  // The proxy normally preserves the user's region cookie. This fallback stays static.
+  redirect(`/${DEFAULT_REGION}`);
 }

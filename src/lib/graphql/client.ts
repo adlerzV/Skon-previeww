@@ -59,8 +59,7 @@ export async function fetchGraphQL(
   authToken?: string,
   sessionId?: string,
   bootstrapProof?: string,
-  previousAuthToken?: string,
-  extraHeaders?: Record<string, string>,
+  previousAuthToken?: string
 ) {
   const strategy: CacheStrategy =
     typeof cacheStrategy === "string"
@@ -71,7 +70,8 @@ export async function fetchGraphQL(
 
   const { url: endpointUrl, hostHeader } = resolveEndpoint();
   let boundSessionId = sessionId;
-  if (!boundSessionId) {
+  const needsSessionBinding = Boolean(authToken || bootstrapProof || previousAuthToken || sessionId);
+  if (needsSessionBinding && !boundSessionId) {
     try {
       boundSessionId = (await cookies()).get(SESSION_ID_COOKIE)?.value;
     } catch {}
@@ -87,7 +87,6 @@ export async function fetchGraphQL(
       ...(boundSessionId ? { "X-BTL-Session-ID": boundSessionId } : {}),
       ...(bootstrapProof ? { "X-BTL-Session-Bootstrap": bootstrapProof } : {}),
       ...(previousAuthToken ? { "X-BTL-Previous-Authorization": `Bearer ${previousAuthToken}` } : {}),
-      ...(extraHeaders ?? {}),
       ...(hostHeader ? { Host: hostHeader } : {}),
     },
     body: JSON.stringify({ query, variables }),

@@ -1,7 +1,9 @@
-import { getHeaderViewerData } from "@/lib/auth/session";
-import MobileBottomNav from "./MobileBottomNav";
+"use client";
 
-export default async function MobileBottomNavAsync() {
-  const { user } = await getHeaderViewerData().catch(() => ({ user: null }));
-  return <MobileBottomNav user={user ? { name: user.name, avatarUrl: user.avatarUrl } : null} />;
+import MobileBottomNav from "./MobileBottomNav";
+import { useHeaderViewer } from "./HeaderViewerProvider";
+
+export default function MobileBottomNavAsync() {
+  const { user } = useHeaderViewer();
+  return <MobileBottomNav user={user} />;
 }

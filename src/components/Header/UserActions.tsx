@@ -21,7 +21,7 @@ export default function UserActions({ user, wishlistCount = 0 }: UserActionsProp
   const prefetchWishlist = () => router.prefetch("/my-account/wishlist");
 
   return (
-    <div className="relative group/user">
+    <div className="relative group/user min-w-[128px]">
       <Link
         href="/my-account"
         onMouseEnter={prefetchAccount}

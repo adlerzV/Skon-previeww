@@ -11,6 +11,7 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import Skeleton from "@/components/ui/Skeleton";
 import { Menu, Search, User, X, ChevronDown, ChevronLeft } from "lucide-react";
 import { useActiveRegion, buildRegionHref } from "@/lib/hooks/useActiveRegion";
+import { useHeaderViewer } from "./HeaderViewerProvider";
 
 interface MobileMenuItem {
   title: string;
@@ -48,13 +49,14 @@ function RegionFlagSlot({
 }
 
 function DrawerUserRow({
-  dataPromise,
+  user,
+  loading,
   onNavigate,
 }: {
-  dataPromise: Promise<MobileMenuDrawerData>;
+  user: MobileMenuDrawerData["user"];
+  loading: boolean;
   onNavigate: () => void;
 }) {
-  const { user } = use(dataPromise);
 
   return (
     <Link
@@ -62,7 +64,9 @@ function DrawerUserRow({
       onClick={onNavigate}
       className="flex items-center gap-3 px-5 py-4 border-b border-brand-surface shrink-0 hover:bg-white/5 transition-colors"
     >
-      {user ? (
+      {loading ? (
+        <DrawerUserRowSkeleton />
+      ) : user ? (
         <>
           <UserAvatar src={user.avatarUrl} name={user.name} size="md" ring />
           <div className="flex flex-col min-w-0">
@@ -157,6 +161,7 @@ export default function MobileMenu({ activeRegion, regionsPromise, drawerDataPro
   const pathname = usePathname();
   const router = useRouter();
   const { region: currentRegion } = useActiveRegion();
+  const { user: drawerUser, loading: drawerUserLoading } = useHeaderViewer();
   const buildHref = (link: string) => buildRegionHref(currentRegion, link);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -180,6 +185,7 @@ export default function MobileMenu({ activeRegion, regionsPromise, drawerDataPro
       searchInputRef.current?.focus();
     }
   }, [isSearchActive]);
+
 
   const isBlogSection = Boolean(pathname?.startsWith("/blog") || pathname?.includes("/blog/"));
 
@@ -361,9 +367,7 @@ export default function MobileMenu({ activeRegion, regionsPromise, drawerDataPro
               </button>
             </div>
 
-            <Suspense fallback={<DrawerUserRowSkeleton />}>
-              <DrawerUserRow dataPromise={drawerDataPromise} onNavigate={closeMenu} />
-            </Suspense>
+            <DrawerUserRow user={drawerUser} loading={drawerUserLoading} onNavigate={closeMenu} />
 
             <div className="flex-1 overflow-y-auto flex flex-col">
               <nav className="flex flex-col text-right w-full">

@@ -31,6 +31,7 @@ function BlogPostCard({ post, region, categorySlug }: BlogPostCardProps) {
 
   return (
     <Link
+      prefetch={false}
       href={`/${region}/blog/${resolvedCategorySlug}/${post.slug}`}
       className="group flex bg-brand-surface border border-white/5 hover:border-brand-blue/40 rounded-xl overflow-hidden transition-colors w-full"
     >

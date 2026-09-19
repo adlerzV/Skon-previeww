@@ -15,13 +15,15 @@ export default function DesktopNavLinks({ activeRegion }: DesktopNavLinksProps) 
 
   return (
     <nav className="flex items-center h-full gap-6">
-      <Link 
+      <Link
+        prefetch={false}
         href={`/${activeRegion}`} 
         className={`${NAV_CLASSES} ${isShopActive ? "border-brand-blue rounded-none text-white" : "border-transparent text-brand-m_khonsa hover:text-white"}`}
       >
         فروشگاه
       </Link>
-      <Link 
+      <Link
+        prefetch={false}
         href={`/${activeRegion}/blog`} 
         className={`${NAV_CLASSES} ${isBlogActive ? "border-brand-blue rounded-none text-white" : "border-transparent text-brand-m_khonsa hover:text-white"}`}
       >

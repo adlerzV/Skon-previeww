@@ -34,7 +34,8 @@ export async function fetchGraphQLWithErrors(
 ): Promise<{ data: any; errorMessage: string | null }> {
   const { url: endpointUrl, hostHeader } = resolveEndpoint();
   let boundSessionId = sessionId;
-  if (!boundSessionId) {
+  const needsSessionBinding = Boolean(authToken || bootstrapProof || previousAuthToken || sessionId);
+  if (needsSessionBinding && !boundSessionId) {
     try {
       boundSessionId = (await cookies()).get(SESSION_ID_COOKIE)?.value;
     } catch {}

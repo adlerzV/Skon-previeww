@@ -1,18 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import DesktopNavLinks from "./DesktopNavLinks";
 import HeaderSearch from "./HeaderSearch";
 import HeaderCart from "./HeaderCart";
 import HeaderMenuSwitcherAsync from "./HeaderMenuSwitcherAsync";
 import RegionSwitcherAsync from "./RegionSwitcherAsync";
 import UserActionsAsync from "./UserActionsAsync";
-import UserActionsSkeleton from "./UserActionsSkeleton";
 import GamesNavSkeleton from "./GamesNavSkeleton";
 import MobileMenuAsync from "./MobileMenuAsync";
 import MobileBottomNavAsync from "./MobileBottomNavAsync";
-import MobileBottomNav from "./MobileBottomNav";
+import { HeaderViewerProvider } from "./HeaderViewerProvider";
 import Skeleton from "@/components/ui/Skeleton";
 import { Download, HelpCircle, AlertCircle } from "lucide-react";
 
@@ -21,12 +19,10 @@ const ACTION_BUTTON_CLASSES =
 const ICON_WRAPPER_CLASSES =
   "flex items-center justify-center rounded-full w-5 h-5 text-brand-surface_m shrink-0";
 
-export default async function Header() {
-  const cookieStore = await cookies();
-  const activeRegion = cookieStore.get("store_region")?.value || "eu";
+export default function Header({ activeRegion }: { activeRegion: string }) {
 
   return (
-    <>
+    <HeaderViewerProvider>
       <header className="w-full sticky top-0 lg:top-[-60px] z-[10000] bg-brand-bg" dir="rtl">
         <div className="hidden lg:flex relative w-full justify-between items-center h-[60px] px-6 max-w-[1600px] mx-auto">
           <div className="flex items-center h-full gap-8">
@@ -63,9 +59,7 @@ export default async function Header() {
               <span>پشتیبانی</span>
             </Link>
 
-            <Suspense fallback={<UserActionsSkeleton />}>
-              <UserActionsAsync />
-            </Suspense>
+            <UserActionsAsync />
           </div>
         </div>
 
@@ -96,10 +90,8 @@ export default async function Header() {
         </div>
       </header>
 
-      <Suspense fallback={<MobileBottomNav user={null} />}>
-        <MobileBottomNavAsync />
-      </Suspense>
-    </>
+      <MobileBottomNavAsync />
+    </HeaderViewerProvider>
   );
 }
 

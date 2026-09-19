@@ -67,8 +67,9 @@ export default function CategoryHero({ banners }: Props) {
                 alt={banner.subtitle}
                 fill
                 priority={index === 0}
+                fetchPriority={index === 0 ? "high" : "auto"}
                 loading={index === 0 ? "eager" : "lazy"}
-                quality={80}
+                quality={75}
                 sizes="(max-width: 1600px) 100vw, 1600px"
                 className="object-cover object-center"
               />
@@ -86,8 +87,8 @@ export default function CategoryHero({ banners }: Props) {
                 alt="Banner Logo"
                 fill
                 sizes="(max-width: 768px) 192px, 256px"
-                quality={75}
-                loading="eager"
+                quality={70}
+                loading="lazy"
                 className="object-contain object-right"
               />
             </div>

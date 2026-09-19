@@ -1,8 +1,9 @@
-import { getHeaderViewerData } from "@/lib/auth/session";
+"use client";
+
 import UserActions from "./UserActions";
+import { useHeaderViewer } from "./HeaderViewerProvider";
 
-export default async function UserActionsAsync() {
-  const { user, wishlistIds } = await getHeaderViewerData().catch(() => ({ user: null, wishlistIds: [] }));
-
-  return <UserActions user={user} wishlistCount={wishlistIds.length} />;
+export default function UserActionsAsync() {
+  const { user, wishlistCount } = useHeaderViewer();
+  return <UserActions user={user} wishlistCount={wishlistCount} />;
 }

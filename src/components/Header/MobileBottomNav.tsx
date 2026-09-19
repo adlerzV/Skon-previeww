@@ -31,6 +31,7 @@ export default function MobileBottomNav({ user }: MobileBottomNavProps) {
     >
       <div className="grid grid-cols-4 items-stretch h-[58px]">
         <Link
+          prefetch={false}
           href="/my-account"
           className="flex flex-col items-center justify-center gap-1"
           aria-label="حساب کاربری"
@@ -47,6 +48,7 @@ export default function MobileBottomNav({ user }: MobileBottomNavProps) {
         </Link>
 
         <Link
+          prefetch={false}
           href={`/${region}/blog`}
           className="flex flex-col items-center justify-center gap-1"
           aria-label="بلاگ"
@@ -59,6 +61,7 @@ export default function MobileBottomNav({ user }: MobileBottomNavProps) {
         </Link>
 
         <Link
+          prefetch={false}
           href={`/${region}`}
           className="flex flex-col items-center justify-center gap-1"
           aria-label="فروشگاه"
@@ -71,6 +74,7 @@ export default function MobileBottomNav({ user }: MobileBottomNavProps) {
         </Link>
 
         <Link
+          prefetch={false}
           href="/cart"
           className="flex flex-col items-center justify-center gap-1"
           aria-label={`سبد خرید — ${totalQuantity} آیتم`}

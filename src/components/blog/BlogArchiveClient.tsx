@@ -64,7 +64,7 @@ export default function BlogArchiveClient({
       {!isSearching && featuredPosts.length > 0 && (
         <div className="flex flex-col gap-4">
           <h2 className="text-lg font-black text-white">آخرین اخبار</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="cv-auto grid grid-cols-2 md:grid-cols-4 gap-4">
             {featuredPosts.map((post) => (
               <BlogFeaturedCard key={post.id} post={post} region={region} />
             ))}

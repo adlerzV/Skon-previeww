@@ -1,11 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { cookies } from "next/headers";
 import { Send, MessageCircle, Mail, TrendingUp } from "lucide-react";
 
-export default async function Footer() {
-  const cookieStore = await cookies();
-  const activeRegion = cookieStore.get("store_region")?.value || "eu";
+export default function Footer({ activeRegion = "eu" }: { activeRegion?: string }) {
 
   const QUICK_LINKS = [
     { label: "فروشگاه", href: `/${activeRegion}` },
