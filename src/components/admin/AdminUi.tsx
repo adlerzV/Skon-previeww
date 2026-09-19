@@ -41,7 +41,7 @@ export function AdminCard({ children, className = "" }: { children: ReactNode; c
   return <section className={`admin-card ${className}`}>{children}</section>;
 }
 
-export function AdminStatCard({ label, value, helper, tone = "default" }: { label: string; value: string | number; helper?: string; tone?: "default" | "warning" | "success" }) {
+export function AdminStatCard({ label, value, helper, tone = "default" }: { label: string; value: string | number; helper?: string; tone?: "default" | "info" | "warning" | "success" }) {
   return (
     <div className={`admin-stat admin-stat-${tone}`}>
       <div className="admin-stat-label">{label}</div>

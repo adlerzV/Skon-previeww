@@ -1,2 +1,2 @@
-import AdminModulePlaceholder from "@/components/admin/AdminModulePlaceholder";
-export default function Page() { return <AdminModulePlaceholder title="برد طلا" phase="فاز ۴" />; }
+import AdminGoldClient from "@/components/admin/AdminGoldClient";
+export default function Page(){ return <AdminGoldClient/>; }

@@ -1,14 +1,16 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, Eye, Search, Users } from "lucide-react";
 import { AdminBadge, AdminCard, AdminEmpty, AdminPage, AdminPageIntro, AdminRefreshButton } from "./AdminUi";
 
 type Customer={databaseId:number;name:string;email:string;registeredAt:string;isStaff:boolean;ordersCount:number;ticketsCount:number;reviewsCount:number};
 
-export default function AdminCustomersClient({initial}:{initial:{nodes:Customer[];pageInfo:{hasNextPage:boolean;endCursor:string|null}}}){
- const [data,setData]=useState(initial),[search,setSearch]=useState(""),[loading,setLoading]=useState(false);
+export default function AdminCustomersClient({initial}:{initial?:{nodes:Customer[];pageInfo:{hasNextPage:boolean;endCursor:string|null}}}){
+ const empty={nodes:[] as Customer[],pageInfo:{hasNextPage:false,endCursor:null}};
+ const [data,setData]=useState(initial ?? empty),[search,setSearch]=useState(""),[loading,setLoading]=useState(!initial);
  const load=async(after?:string|null)=>{setLoading(true);try{const q=new URLSearchParams({search});if(after)q.set("after",after);const r=await fetch(`/api/admin/customers?${q}`,{cache:"no-store"});if(r.ok)setData(await r.json())}finally{setLoading(false)}};
+ useEffect(()=>{if(!initial)void load();},[]);
  return <AdminPage>
   <AdminPageIntro eyebrow="حساب‌ها" title="مشتریان" description="پرونده عملیاتی مشتری و ارتباط آن با سفارش‌ها، تیکت‌ها و دیدگاه‌ها." action={<AdminRefreshButton onClick={()=>void load()} loading={loading}/>}/>
   <AdminCard className="mb-4 p-3"><div className="grid gap-2 md:grid-cols-[1fr_110px]"><label className="admin-search-wrap"><Search size={15} className="text-brand-m_khonsa"/><input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==="Enter"&&void load()} placeholder="نام، ایمیل یا نام کاربری" className="admin-input border-0 bg-transparent px-0 shadow-none focus:shadow-none"/></label><button onClick={()=>void load()} className="admin-button admin-button-primary">جستجو</button></div></AdminCard>

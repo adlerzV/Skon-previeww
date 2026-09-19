@@ -203,6 +203,7 @@
   .admin-ui .admin-stat-helper { margin-top:3px; font-size:10px; color:var(--admin-text-muted); }
   .admin-ui .admin-stat-warning { border-color:rgba(246,190,0,.16); }
   .admin-ui .admin-stat-success { border-color:rgba(52,211,153,.15); }
+  .admin-ui .admin-stat-info { border-color:rgba(8,121,232,.18); }
   .admin-ui .admin-table-wrap { overflow:hidden; border:1px solid var(--admin-border); border-radius:12px; background:var(--admin-card); }
   .admin-ui .admin-table { width:100%; border-collapse:collapse; text-align:right; }
   .admin-ui .admin-table th { padding:12px 14px; color:#777a83; border-bottom:1px solid var(--admin-border); font-size:9px; font-weight:900; white-space:nowrap; }

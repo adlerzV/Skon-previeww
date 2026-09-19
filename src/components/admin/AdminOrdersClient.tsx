@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, Search, ChevronLeft } from "lucide-react";
 import { AdminBadge, AdminCard, AdminEmpty, AdminPage, AdminPageIntro, AdminRefreshButton } from "./AdminUi";
 
@@ -21,8 +21,10 @@ interface OrderNode {
 const statusLabel: Record<string, string> = { processing: "در حال پردازش", pending: "در انتظار", completed: "تکمیل‌شده", cancelled: "لغوشده", all: "همه" };
 const fulfillmentLabel: Record<string, string> = { processing: "در حال پردازش", partially_fulfilled: "ناقص", fulfilled: "تحویل کامل", completed: "تکمیل‌شده", pending: "در انتظار" };
 
-export default function AdminOrdersClient({ initial, permissions }: { initial: { nodes: OrderNode[]; pageInfo: { hasNextPage: boolean; endCursor: string | null } }; permissions: string[] }) {
-  const [data, setData] = useState(initial);
+export default function AdminOrdersClient({ initial, permissions = [] }: { initial?: { nodes: OrderNode[]; pageInfo: { hasNextPage: boolean; endCursor: string | null } }; permissions?: string[] }) {
+  const empty = { nodes: [] as OrderNode[], pageInfo: { hasNextPage: false, endCursor: null as string | null } };
+  const [data, setData] = useState(initial ?? empty);
+  const [effectivePermissions, setEffectivePermissions] = useState(permissions);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("processing");
   const [loading, setLoading] = useState(false);
@@ -36,6 +38,14 @@ export default function AdminOrdersClient({ initial, permissions }: { initial: {
       if (res.ok) setData(await res.json());
     } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    if (initial) return;
+    void load();
+    fetch("/api/admin/context", { cache: "no-store" }).then((res) => res.ok ? res.json() : null).then((ctx) => {
+      if (ctx?.permissions) setEffectivePermissions(ctx.permissions);
+    }).catch(() => undefined);
+  }, []);
 
   return (
     <AdminPage>
@@ -67,7 +77,7 @@ export default function AdminOrdersClient({ initial, permissions }: { initial: {
       </div>
 
       {data.pageInfo.hasNextPage && <div className="mt-4 flex justify-center"><button type="button" onClick={() => void load(data.pageInfo.endCursor)} disabled={loading} className="admin-button admin-button-muted"><ChevronLeft size={15}/> صفحه بعد</button></div>}
-      {!permissions.includes("orders.write") && <div className="mt-3 text-[10px] text-brand-m_khonsa">این حساب فقط مجوز مشاهده دارد.</div>}
+      {!effectivePermissions.includes("orders.write") && <div className="mt-3 text-[10px] text-brand-m_khonsa">این حساب فقط مجوز مشاهده دارد.</div>}
     </AdminPage>
   );
 }

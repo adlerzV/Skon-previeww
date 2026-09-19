@@ -12,8 +12,16 @@ interface AdminSummaryData {
   tickets: Array<{ id: string; databaseId: number; title: string; date?: string; linkedOrderId?: number | null; customerName?: string | null }>;
 }
 
-export default function AdminDashboard({ initialData }: { initialData: AdminSummaryData }) {
-  const [data, setData] = useState(initialData);
+const EMPTY_DATA: AdminSummaryData = {
+  user: { id: "", databaseId: 0, name: "", email: "", avatarUrl: null },
+  permissions: [],
+  summary: { openTicketsCount: 0, pendingReviewsCount: 0, processingOrdersCount: 0, unreadNotificationsCount: 0 },
+  tickets: [],
+};
+
+export default function AdminDashboard({ initialData }: { initialData?: AdminSummaryData }) {
+  const [data, setData] = useState(initialData ?? EMPTY_DATA);
+  const [loading, setLoading] = useState(!initialData);
   const [refreshing, setRefreshing] = useState(false);
 
   const refresh = async () => {
@@ -21,12 +29,14 @@ export default function AdminDashboard({ initialData }: { initialData: AdminSumm
     try {
       const response = await fetch("/api/admin/summary", { cache: "no-store" });
       if (response.ok) setData(await response.json());
+      setLoading(false);
     } finally {
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
+    if (!initialData) void refresh();
     const id = window.setInterval(() => void refresh(), 30_000);
     return () => window.clearInterval(id);
   }, []);
