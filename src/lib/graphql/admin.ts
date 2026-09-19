@@ -179,3 +179,46 @@ export const ADMIN_STAFF_USERS_QUERY = `
     adminStaffUsers { databaseId name email }
   }
 `;
+
+export const ADMIN_CDKEY_STOCK_QUERY = `
+  query GetAdminCdKeyStock($first: Int, $after: String, $status: String, $productId: Int, $variationId: Int) {
+    adminCdKeyStock(first: $first, after: $after, status: $status, productId: $productId, variationId: $variationId) {
+      pageInfo { hasNextPage endCursor }
+      summary { available reserved used failed total }
+      nodes {
+        stockId productId variationId productName variationName status
+        orderId itemId addedBy createdAt usedAt failureReason assignmentAttempts
+      }
+    }
+  }
+`;
+
+export const ADMIN_IMPORT_CDKEYS_MUTATION = `
+  mutation AdminImportCdKeys($productId: Int!, $variationId: Int!, $keys: String!) {
+    adminImportCdKeys(input: { productId: $productId, variationId: $variationId, keys: $keys }) {
+      success requested added rejected availableCount
+    }
+  }
+`;
+
+export const ADMIN_ASSIGN_CDKEYS_MUTATION = `
+  mutation AdminAssignCdKeys($orderId: Int!, $itemId: Int!, $quantity: Int!) {
+    adminAssignCdKeys(input: { orderId: $orderId, itemId: $itemId, quantity: $quantity }) {
+      success assigned deliveredQuantity remainingQuantity fulfillmentStatus
+    }
+  }
+`;
+
+export const ADMIN_ASSIGN_CDKEY_MANUALLY_MUTATION = `
+  mutation AdminAssignCdKeyManually($orderId: Int!, $itemId: Int!, $key: String!) {
+    adminAssignCdKeyManually(input: { orderId: $orderId, itemId: $itemId, key: $key }) {
+      success deliveredQuantity remainingQuantity fulfillmentStatus
+    }
+  }
+`;
+
+export const ADMIN_REVEAL_CDKEYS_MUTATION = `
+  mutation AdminRevealCdKeys($orderId: Int!, $itemId: Int!) {
+    adminRevealCdKeys(input: { orderId: $orderId, itemId: $itemId }) { values }
+  }
+`;

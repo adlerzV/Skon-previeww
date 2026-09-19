@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, ClipboardList, FileText, LayoutDashboard, LifeBuoy, Menu, Package, ShieldCheck, ShoppingCart, UserRound, Users, X } from "lucide-react";
+import { Activity, ClipboardList, FileText, KeyRound, LayoutDashboard, LifeBuoy, Menu, Package, ShieldCheck, ShoppingCart, UserRound, Users, X } from "lucide-react";
 import { useState } from "react";
 import { ADMIN_PERMISSIONS, type AdminPermission } from "@/lib/admin/permissions";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -21,6 +21,7 @@ const ITEMS: Array<{ href: string; label: string; icon: typeof LayoutDashboard; 
   { href: "/admin/reviews", label: "دیدگاه‌ها", icon: ClipboardList, permission: ADMIN_PERMISSIONS.REVIEWS_MODERATE },
   { href: "/admin/customers", label: "مشتریان", icon: Users, permission: ADMIN_PERMISSIONS.USERS_READ },
   { href: "/admin/engine", label: "موتور و زیرساخت", icon: Package, permission: ADMIN_PERMISSIONS.PRICING_READ },
+  { href: "/admin/cdkeys", label: "CD Keyها", icon: KeyRound, permission: ADMIN_PERMISSIONS.CDKEYS_READ },
   { href: "/admin/audit", label: "گزارش حسابرسی", icon: FileText, permission: ADMIN_PERMISSIONS.AUDIT_READ },
   { href: "/admin/settings", label: "تنظیمات حساب", icon: ShieldCheck, permission: ADMIN_PERMISSIONS.SETTINGS_MANAGE },
   { href: "/admin/admins", label: "مدیران و نقش‌ها", icon: UserRound, permission: ADMIN_PERMISSIONS.USERS_WRITE },

@@ -24,6 +24,11 @@ import {
   ADMIN_TICKETS_QUERY,
   ADMIN_STAFF_USERS_QUERY,
   ADMIN_OPEN_TICKETS_QUERY,
+  ADMIN_CDKEY_STOCK_QUERY,
+  ADMIN_IMPORT_CDKEYS_MUTATION,
+  ADMIN_ASSIGN_CDKEYS_MUTATION,
+  ADMIN_ASSIGN_CDKEY_MANUALLY_MUTATION,
+  ADMIN_REVEAL_CDKEYS_MUTATION,
 } from "@/lib/graphql/admin";
 import type { AdminPermission } from "./permissions";
 
@@ -106,6 +111,12 @@ export async function getAdminStaffUsers() {
   return Array.isArray(data?.adminStaffUsers) ? data.adminStaffUsers : [];
 }
 
+export async function getAdminCdKeyStock(variables: Record<string, unknown> = {}) {
+  await requireAdmin("cdkeys.read");
+  const data = await adminFetch(ADMIN_CDKEY_STOCK_QUERY, { first: 30, status: "all", ...variables });
+  return data?.adminCdKeyStock ?? { nodes: [], pageInfo: { hasNextPage: false, endCursor: null }, summary: { available: 0, reserved: 0, used: 0, failed: 0, total: 0 } };
+}
+
 export async function getAdminNotifications(unreadOnly = false) {
   await requireAdmin();
   const data = await adminFetch(ADMIN_NOTIFICATIONS_QUERY, { first: 20, unreadOnly });
@@ -128,4 +139,8 @@ export const ADMIN_MUTATIONS = {
   addOrderNote: ADMIN_ADD_ORDER_NOTE_MUTATION,
   updateOrderStatus: ADMIN_UPDATE_ORDER_STATUS_MUTATION,
   updateOrderItemFulfillment: ADMIN_UPDATE_ORDER_ITEM_FULFILLMENT_MUTATION,
+  importCdKeys: ADMIN_IMPORT_CDKEYS_MUTATION,
+  assignCdKeys: ADMIN_ASSIGN_CDKEYS_MUTATION,
+  assignCdKeyManually: ADMIN_ASSIGN_CDKEY_MANUALLY_MUTATION,
+  revealCdKeys: ADMIN_REVEAL_CDKEYS_MUTATION,
 };
