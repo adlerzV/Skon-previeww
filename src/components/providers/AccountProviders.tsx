@@ -6,11 +6,7 @@ import { CartProvider } from "@/context/CartContext";
 import AuthRefresher from "@/components/account/AuthRefresher";
 import TopLoader from "@/components/ui/TopLoader";
 
-export default function AccountProviders({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function AccountProviders({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
       <CartProvider>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { fetchGraphQL } from "@/lib/graphql";
-import { REVOKE_SESSION_MUTATION } from "@/lib/graphql/auth";
+import { REVOKE_CURRENT_SESSION_MUTATION, REVOKE_SESSION_MUTATION } from "@/lib/graphql/auth";
 import { AUTH_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, LOGGED_IN_COOKIE, IS_STAFF_COOKIE, SESSION_ID_COOKIE } from "@/lib/auth/constants";
 
 export async function POST() {
@@ -10,6 +10,8 @@ export async function POST() {
   const sessionId = store.get(SESSION_ID_COOKIE)?.value;
   if (token && sessionId) {
     await fetchGraphQL(REVOKE_SESSION_MUTATION, { sessionId }, [], "no-store", token, sessionId);
+  } else if (token) {
+    await fetchGraphQL(REVOKE_CURRENT_SESSION_MUTATION, {}, [], "no-store", token);
   }
   const response = NextResponse.json({ success: true });
   for (const name of [AUTH_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, LOGGED_IN_COOKIE, IS_STAFF_COOKIE, SESSION_ID_COOKIE]) {

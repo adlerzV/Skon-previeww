@@ -9,11 +9,21 @@ import AdminBadge from "@/components/ui/AdminBadge";
 interface UserActionsProps {
   user: { name: string; avatarUrl?: string | null; isStaff?: boolean } | null;
   wishlistCount?: number;
+  loading?: boolean;
 }
 
-export default function UserActions({ user, wishlistCount = 0 }: UserActionsProps) {
+export default function UserActions({ user, wishlistCount = 0, loading = false }: UserActionsProps) {
   const router = useRouter();
   const { logout, isLoggingOut } = useLogout();
+
+  if (loading) {
+    return (
+      <div className="relative min-w-[128px] flex items-center gap-2.5 px-3 py-4" aria-hidden="true">
+        <span className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-brand-surface_hover" />
+        <span className="h-3 w-16 animate-pulse rounded bg-brand-surface_hover" />
+      </div>
+    );
+  }
 
   const isLoggedIn = Boolean(user);
   const prefetchAccount = () => router.prefetch("/my-account");

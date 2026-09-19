@@ -390,3 +390,8 @@ export const VERIFY_ADMIN_SMS_OTP_MUTATION = `
     }
   }
 `;
+export const REVOKE_CURRENT_SESSION_MUTATION = `
+  mutation RevokeCurrentSession {
+    revokeCurrentSession { success }
+  }
+`;

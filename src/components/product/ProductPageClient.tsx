@@ -68,7 +68,7 @@ export default function ProductPageClient({
   wishlistSlot,
   children,
 }: Props) {
-  const variations = product.variationCards ?? [];
+  const variations = useMemo(() => product.variationCards ?? [], [product.variationCards]);
   const activeThumbRef = useRef<HTMLButtonElement>(null);
   const heroRowRef = useRef<HTMLDivElement>(null);
   const hasScrolledThumbRef = useRef(false);
@@ -96,6 +96,7 @@ export default function ProductPageClient({
   const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>(() =>
     getFirstValidAttributes(initialEdition)
   );
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
 
   useEffect(() => {
     setSelectedAttrs(getFirstValidAttributes(initialEdition));
@@ -219,8 +220,6 @@ export default function ProductPageClient({
         ?.imageUrl?.trim() ?? null
     );
   }, [variations, groupedAttributes, selectedAttrs]);
-
-  const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
 
   const displayImage =
     selectedGalleryImage ||

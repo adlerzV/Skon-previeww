@@ -28,14 +28,16 @@ export function HeaderViewerProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<HeaderViewerState>({
     user: null,
     wishlistCount: 0,
-    loading: false,
+    loading: true,
   });
 
   useEffect(() => {
-    if (!hasLoginCookie()) return;
+    if (!hasLoginCookie()) {
+      setState({ user: null, wishlistCount: 0, loading: false });
+      return;
+    }
 
     let cancelled = false;
-    setState((current) => ({ ...current, loading: true }));
 
     fetch("/api/account/header-context", {
       method: "GET",

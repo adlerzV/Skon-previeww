@@ -16,59 +16,46 @@ type TicketSummary = AccountDashboardProps["recentTickets"][number];
 
 
 export default async function MyAccountView() {
-  const user = await getCurrentUser();
+  const userPromise = getCurrentUser();
+  const tokenPromise = getAuthToken();
+  const dataPromise = tokenPromise
+    .then((token) => fetchGraphQL(DASHBOARD_SUMMARY_QUERY, {}, [], "no-store", token || undefined))
+    .catch(() => null);
+
+  const [user, dataResult] = await Promise.all([userPromise, dataPromise]);
 
   if (!user) {
     return <UnifiedLoginFlow />;
   }
 
-  const token = await getAuthToken();
-  const authToken = token || undefined;
-
   if (user.isStaff) {
     redirect("/admin");
   }
 
-  try {
-    const data = await fetchGraphQL(DASHBOARD_SUMMARY_QUERY, {}, [], "no-store", authToken);
+  const data = dataResult;
 
-    const allOrders: OrderSummary[] = data?.customer?.orders?.nodes ?? [];
-    const successfulOrdersCount = allOrders.filter(
-      (o) => typeof o.status === "string" && SUCCESSFUL_STATUSES.has(o.status)
-    ).length;
-    const wishlistIds: string[] = data?.viewer?.wishlistIds ?? [];
-    const tickets: TicketSummary[] = data?.myTickets?.nodes ?? [];
-    const openTicketsCount = tickets.filter(
-      (t) => (t.ticketStatus ?? "open") !== "closed"
-    ).length;
-    const reviewsCount: number = data?.myReviews?.totalCount ?? 0;
+  const allOrders: OrderSummary[] = data?.customer?.orders?.nodes ?? [];
+  const successfulOrdersCount = allOrders.filter(
+    (o) => typeof o.status === "string" && SUCCESSFUL_STATUSES.has(o.status)
+  ).length;
+  const wishlistIds: string[] = data?.viewer?.wishlistIds ?? [];
+  const tickets: TicketSummary[] = data?.myTickets?.nodes ?? [];
+  const openTicketsCount = tickets.filter(
+    (t) => (t.ticketStatus ?? "open") !== "closed"
+  ).length;
+  const reviewsCount: number = data?.myReviews?.totalCount ?? 0;
 
-    return (
-      <div className="mx-auto h-full">
-        <AccountDashboard
-          user={user}
-          recentOrders={allOrders.slice(0, 3)}
-          successfulOrdersCount={successfulOrdersCount}
-          wishlistCount={wishlistIds.length}
-          recentTickets={tickets.slice(0, 3)}
-          openTicketsCount={openTicketsCount}
-          reviewsCount={reviewsCount}
-        />
-      </div>
-    );
-  } catch {
-    return (
-      <div className="mx-auto h-full">
-        <AccountDashboard
-          user={user}
-          recentOrders={[]}
-          successfulOrdersCount={0}
-          wishlistCount={0}
-          recentTickets={[]}
-          openTicketsCount={0}
-          reviewsCount={0}
-        />
-      </div>
-    );
-  }
+  return (
+    <div className="mx-auto h-full">
+      <AccountDashboard
+        user={user}
+        recentOrders={allOrders.slice(0, 3)}
+        successfulOrdersCount={successfulOrdersCount}
+        wishlistCount={wishlistIds.length}
+        recentTickets={tickets.slice(0, 3)}
+        openTicketsCount={openTicketsCount}
+        reviewsCount={reviewsCount}
+      />
+    </div>
+  );
 }

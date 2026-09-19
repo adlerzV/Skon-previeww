@@ -33,6 +33,7 @@ export default function AdminGoldClient({ initial }: { initial?: Board }) {
 
   const pollInFlightRef = useRef(false);
   const pollTimerRef = useRef<number | null>(null);
+  const schedulePollRef = useRef<() => void>(() => {});
   const mountedRef = useRef(true);
   const boardRef = useRef(board);
 
@@ -72,11 +73,12 @@ export default function AdminGoldClient({ initial }: { initial?: Board }) {
 
     pollTimerRef.current = window.setTimeout(async () => {
       if (document.visibilityState === 'visible') await load(true);
-      schedulePoll();
+      schedulePollRef.current();
     }, delay);
   }, [load]);
 
   useEffect(() => {
+    schedulePollRef.current = schedulePoll;
     mountedRef.current = true;
     const bootstrap = async () => {
       if (!initial) await load();

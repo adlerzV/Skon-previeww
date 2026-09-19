@@ -326,24 +326,38 @@ export async function getCategoryProducts(slug: string, activeRegion: string = "
 
   const cached = unstable_cache(
     async () => {
-      const data = await fetchGraphQL(
-        `
-          ${PRODUCT_CARD_FIELDS}
-          query GetCategoryProducts($categoryIn: [String], $regionSlug: String) {
-            products(first: 100, where: { categoryIn: $categoryIn, status: "PUBLISH", regionSlug: $regionSlug }) {
-              nodes { ...ProductCardFields }
+      const collected: ProductNode[] = [];
+      let after: string | null = null;
+      let page = 0;
+
+      do {
+        const data = await fetchGraphQL(
+          `
+            ${PRODUCT_CARD_FIELDS}
+            query GetCategoryProducts($categoryIn: [String], $regionSlug: String, $after: String) {
+              products(first: 100, after: $after, where: { categoryIn: $categoryIn, status: "PUBLISH", regionSlug: $regionSlug }) {
+                pageInfo { hasNextPage endCursor }
+                nodes { ...ProductCardFields }
+              }
             }
-          }
-        `,
-        { categoryIn: [slug], regionSlug: activeRegion },
-        ["products", categoryTag]
-      );
+          `,
+          { categoryIn: [slug], regionSlug: activeRegion, after },
+          ["products", categoryTag],
+          "no-store"
+        );
 
-      if (data === null) {
-        throw new Error(`دریافت محصولات دسته‌بندی «${slug}» با خطا مواجه شد`);
-      }
+        if (data === null) {
+          throw new Error(`دریافت محصولات دسته‌بندی «${slug}» با خطا مواجه شد`);
+        }
 
-      return formatProducts(data.products?.nodes ?? [], true, activeRegion).filter(
+        collected.push(...(data.products?.nodes ?? []));
+        const pageInfo = data.products?.pageInfo;
+        if (!pageInfo?.hasNextPage || !pageInfo.endCursor) break;
+        after = pageInfo.endCursor;
+        page += 1;
+      } while (page < 50);
+
+      return formatProducts(collected, true, activeRegion).filter(
         (p) => p.isAvailableInRegion !== false
       );
     },
