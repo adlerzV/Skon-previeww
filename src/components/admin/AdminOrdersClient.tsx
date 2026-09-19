@@ -2,8 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Eye, Search, ChevronLeft } from "lucide-react";
-import { AdminBadge, AdminCard, AdminEmpty, AdminPage, AdminPageIntro, AdminRefreshButton } from "./AdminUi";
+import { ChevronLeft, Eye } from "lucide-react";
+import {
+  AdminBadge,
+  AdminButton,
+  AdminEmpty,
+  AdminFilterBar,
+  AdminMobileList,
+  AdminPage,
+  AdminPageIntro,
+  AdminRefreshButton,
+  AdminSearchInput,
+  AdminSelect,
+  AdminTable,
+  AdminListCard,
+} from "./AdminUi";
 
 interface OrderNode {
   databaseId: number;
@@ -18,8 +31,10 @@ interface OrderNode {
   customerEmail: string;
 }
 
-const statusLabel: Record<string, string> = { processing: "در حال پردازش", pending: "در انتظار", completed: "تکمیل‌شده", cancelled: "لغوشده", all: "همه" };
-const fulfillmentLabel: Record<string, string> = { processing: "در حال پردازش", partially_fulfilled: "ناقص", fulfilled: "تحویل کامل", completed: "تکمیل‌شده", pending: "در انتظار" };
+const STATUS_LABEL: Record<string, string> = { processing: "در حال پردازش", pending: "در انتظار", completed: "تکمیل‌شده", cancelled: "لغوشده", all: "همه" };
+const FULFILLMENT_LABEL: Record<string, string> = { processing: "در حال پردازش", partially_fulfilled: "ناقص", fulfilled: "تحویل کامل", completed: "تکمیل‌شده", pending: "در انتظار" };
+
+const statusTone = (status: string) => status === "completed" ? "success" : status === "cancelled" ? "danger" : status === "processing" ? "info" : "warning";
 
 export default function AdminOrdersClient({ initial, permissions = [] }: { initial?: { nodes: OrderNode[]; pageInfo: { hasNextPage: boolean; endCursor: string | null } }; permissions?: string[] }) {
   const empty = { nodes: [] as OrderNode[], pageInfo: { hasNextPage: false, endCursor: null as string | null } };
@@ -27,59 +42,88 @@ export default function AdminOrdersClient({ initial, permissions = [] }: { initi
   const [effectivePermissions, setEffectivePermissions] = useState(permissions);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("processing");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!initial);
 
   const load = async (after?: string | null) => {
     setLoading(true);
     try {
       const qs = new URLSearchParams({ status, search });
       if (after) qs.set("after", after);
-      const res = await fetch(`/api/admin/orders?${qs.toString()}`, { cache: "no-store" });
-      if (res.ok) setData(await res.json());
-    } finally { setLoading(false); }
+      const response = await fetch(`/api/admin/orders?${qs.toString()}`, { cache: "no-store" });
+      if (response.ok) setData(await response.json());
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     if (initial) return;
     void load();
-    fetch("/api/admin/context", { cache: "no-store" }).then((res) => res.ok ? res.json() : null).then((ctx) => {
-      if (ctx?.permissions) setEffectivePermissions(ctx.permissions);
-    }).catch(() => undefined);
+    fetch("/api/admin/context", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((context) => { if (context?.permissions) setEffectivePermissions(context.permissions); })
+      .catch(() => undefined);
   }, []);
 
   return (
     <AdminPage>
-      <AdminPageIntro eyebrow="عملیات" title="سفارش‌ها" description="وضعیت پرداخت و fulfillment را سریع بررسی کن." action={<AdminRefreshButton onClick={() => load()} loading={loading} />} />
+      <AdminPageIntro eyebrow="عملیات" title="سفارش‌ها" description="وضعیت پرداخت و fulfillment را سریع بررسی کن." action={<AdminRefreshButton onClick={() => void load()} loading={loading} />} />
 
-      <AdminCard className="mb-4 p-3">
-        <div className="grid gap-2 md:grid-cols-[1fr_170px_110px]">
-          <label className="flex min-h-10 items-center gap-2 rounded-[5px] border border-brand-surface_hover bg-brand-bg px-3 focus-within:border-brand-blue focus-within:ring-2 focus-within:ring-brand-blue/20">
-            <Search size={15} className="text-brand-m_khonsa" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && void load()} placeholder="شناسه سفارش، نام یا ایمیل" className="w-full min-h-10 rounded-[5px] border border-brand-surface_hover bg-brand-bg px-3 text-xs text-white outline-none placeholder:text-brand-m_khonsa focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 border-0 bg-transparent px-0 shadow-none focus:shadow-none" />
-          </label>
-          <select value={status} onChange={(event) => setStatus(event.target.value)} className="w-full min-h-10 rounded-[5px] border border-brand-surface_hover bg-brand-bg px-3 text-xs text-white outline-none placeholder:text-brand-m_khonsa focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20">
-            <option value="processing">در حال پردازش</option><option value="pending">در انتظار</option><option value="completed">تکمیل‌شده</option><option value="cancelled">لغوشده</option><option value="all">همه</option>
-          </select>
-          <button type="button" onClick={() => void load()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[5px] px-3 text-xs font-black transition disabled:pointer-events-none disabled:opacity-50 bg-brand-blue text-white hover:brightness-110">جستجو</button>
-        </div>
-      </AdminCard>
+      <AdminFilterBar>
+        <AdminSearchInput value={search} onChange={setSearch} onEnter={() => void load()} placeholder="شناسه سفارش، نام یا ایمیل" />
+        <AdminSelect value={status} onChange={(event) => setStatus(event.target.value)} className="lg:w-[190px] lg:flex-none">
+          <option value="processing">در حال پردازش</option><option value="pending">در انتظار</option><option value="completed">تکمیل‌شده</option><option value="cancelled">لغوشده</option><option value="all">همه</option>
+        </AdminSelect>
+        <AdminButton variant="primary" onClick={() => void load()} className="lg:min-w-[96px]">جستجو</AdminButton>
+      </AdminFilterBar>
 
-      <div className="overflow-hidden rounded-[5px] border border-white/[.06] bg-brand-surface hidden lg:block">
-        <table className="w-full border-collapse text-right [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-white/[.06] [&_th]:px-3.5 [&_th]:py-3 [&_th]:text-[9px] [&_th]:font-black [&_th]:text-brand-m_khonsa [&_td]:border-b [&_td]:border-white/[.06] [&_td]:px-3.5 [&_td]:py-3 [&_td]:align-middle [&_tr:last-child_td]:border-b-0 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-white/[.02]"><thead><tr><th>سفارش</th><th>مشتری</th><th>وضعیت</th><th>پرداخت</th><th>تحویل</th><th>مبلغ</th><th>تاریخ</th><th /></tr></thead>
-          <tbody>{data.nodes.map((order) => <tr key={order.databaseId}><td><div className="text-xs font-black text-white">#{order.orderNumber}</div><div className="mt-1 text-[9px] text-brand-m_khonsa">شناسه {order.databaseId}</div></td><td><div className="text-xs font-bold text-white">{order.customerName || "—"}</div><div className="mt-1 text-[9px] text-brand-m_khonsa" dir="ltr">{order.customerEmail || "—"}</div></td><td><AdminBadge tone={order.status === "completed" ? "success" : "info"}>{statusLabel[order.status] ?? order.status}</AdminBadge></td><td><AdminBadge tone={order.paymentStatus === "paid" ? "success" : "warning"}>{order.paymentStatus === "paid" ? "پرداخت‌شده" : order.paymentStatus}</AdminBadge></td><td><span className="text-[11px] text-white">{fulfillmentLabel[order.fulfillmentStatus] ?? order.fulfillmentStatus}</span></td><td><span className="text-[11px] font-black text-white" dir="ltr">{order.total} {order.currency}</span></td><td><span className="text-[9px] text-brand-m_khonsa" dir="ltr">{order.date ? new Date(order.date).toLocaleString("fa-IR") : "—"}</span></td><td><Link href={`/admin/orders/${order.databaseId}`} className="inline-flex items-center gap-1 text-[10px] font-black text-brand-blue"><Eye size={14}/> باز کردن</Link></td></tr>)}</tbody>
-        </table>
-        {data.nodes.length === 0 && <AdminEmpty title="سفارشی با این فیلتر پیدا نشد." />}
-      </div>
+      {data.nodes.length === 0 ? (
+        <AdminEmpty title="سفارشی با این فیلتر پیدا نشد." />
+      ) : (
+        <>
+          <AdminTable minWidth="1080px">
+            <thead><tr><th>سفارش</th><th>مشتری</th><th>وضعیت</th><th>پرداخت</th><th>تحویل</th><th>مبلغ</th><th>تاریخ</th><th /></tr></thead>
+            <tbody>
+              {data.nodes.map((order) => (
+                <tr key={order.databaseId}>
+                  <td><div className="text-xs font-black text-white">#{order.orderNumber}</div><div className="mt-1 text-[9px] text-brand-m_khonsa">شناسه {order.databaseId}</div></td>
+                  <td><div className="text-xs font-bold text-white">{order.customerName || "—"}</div><div className="mt-1 text-[9px] text-brand-m_khonsa" dir="ltr">{order.customerEmail || "—"}</div></td>
+                  <td><AdminBadge tone={statusTone(order.status) as "success" | "danger" | "info" | "warning"}>{STATUS_LABEL[order.status] ?? order.status}</AdminBadge></td>
+                  <td><AdminBadge tone={order.paymentStatus === "paid" ? "success" : "warning"}>{order.paymentStatus === "paid" ? "پرداخت‌شده" : order.paymentStatus}</AdminBadge></td>
+                  <td><span className="text-[10px] font-bold text-white">{FULFILLMENT_LABEL[order.fulfillmentStatus] ?? order.fulfillmentStatus}</span></td>
+                  <td><span className="text-[11px] font-black text-white" dir="ltr">{order.total} {order.currency}</span></td>
+                  <td><span className="text-[9px] text-brand-m_khonsa" dir="ltr">{order.date ? new Date(order.date).toLocaleString("fa-IR") : "—"}</span></td>
+                  <td><Link href={`/admin/orders/${order.databaseId}`} className="inline-flex items-center gap-1 text-[10px] font-black text-brand-blue hover:text-white"><Eye size={14} /> باز کردن</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </AdminTable>
 
-      <div className="lg:hidden space-y-2">
-        {data.nodes.map((order) => <Link key={order.databaseId} href={`/admin/orders/${order.databaseId}`} className="rounded-[5px] border border-white/[.06] bg-brand-surface block p-4"><div className="flex items-start justify-between gap-3"><div><div className="text-sm font-black text-white">#{order.orderNumber}</div><div className="mt-1 text-[10px] text-brand-m_khonsa">{order.customerName || "—"}</div></div><AdminBadge tone={order.status === "completed" ? "success" : "info"}>{statusLabel[order.status] ?? order.status}</AdminBadge></div><div className="mt-4 grid grid-cols-2 gap-3"><Mini label="پرداخت" value={order.paymentStatus === "paid" ? "پرداخت‌شده" : order.paymentStatus}/><Mini label="تحویل" value={fulfillmentLabel[order.fulfillmentStatus] ?? order.fulfillmentStatus}/><Mini label="مبلغ" value={`${order.total} ${order.currency}`} ltr/><Mini label="تاریخ" value={order.date ? new Date(order.date).toLocaleDateString("fa-IR") : "—"}/></div></Link>)}
-        {data.nodes.length === 0 && <AdminEmpty title="سفارشی پیدا نشد." />}
-      </div>
+          <AdminMobileList>
+            {data.nodes.map((order) => (
+              <AdminListCard key={order.databaseId} href={`/admin/orders/${order.databaseId}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0"><div className="text-sm font-black text-white">#{order.orderNumber}</div><div className="mt-1 truncate text-[10px] text-brand-m_khonsa">{order.customerName || "—"}</div></div>
+                  <AdminBadge tone={statusTone(order.status) as "success" | "danger" | "info" | "warning"}>{STATUS_LABEL[order.status] ?? order.status}</AdminBadge>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <Mini label="پرداخت" value={order.paymentStatus === "paid" ? "پرداخت‌شده" : order.paymentStatus} />
+                  <Mini label="تحویل" value={FULFILLMENT_LABEL[order.fulfillmentStatus] ?? order.fulfillmentStatus} />
+                  <Mini label="مبلغ" value={`${order.total} ${order.currency}`} ltr />
+                  <Mini label="تاریخ" value={order.date ? new Date(order.date).toLocaleDateString("fa-IR") : "—"} />
+                </div>
+              </AdminListCard>
+            ))}
+          </AdminMobileList>
+        </>
+      )}
 
-      {data.pageInfo.hasNextPage && <div className="mt-4 flex justify-center"><button type="button" onClick={() => void load(data.pageInfo.endCursor)} disabled={loading} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[5px] px-3 text-xs font-black transition disabled:pointer-events-none disabled:opacity-50 border border-brand-surface_hover bg-brand-surface_hover/60 text-white hover:bg-brand-surface_hover"><ChevronLeft size={15}/> صفحه بعد</button></div>}
+      {data.pageInfo.hasNextPage && <div className="mt-4 flex justify-center"><AdminButton onClick={() => void load(data.pageInfo.endCursor)} disabled={loading}><ChevronLeft size={15} /> صفحه بعد</AdminButton></div>}
       {!effectivePermissions.includes("orders.write") && <div className="mt-3 text-[10px] text-brand-m_khonsa">این حساب فقط مجوز مشاهده دارد.</div>}
     </AdminPage>
   );
 }
 
-function Mini({ label, value, ltr = false }: { label: string; value: string; ltr?: boolean }) { return <div><div className="text-[9px] text-brand-m_khonsa">{label}</div><div className="mt-1 text-[10px] font-bold text-white" dir={ltr ? "ltr" : undefined}>{value}</div></div>; }
+function Mini({ label, value, ltr = false }: { label: string; value: string; ltr?: boolean }) {
+  return <div><div className="text-[9px] text-brand-m_khonsa">{label}</div><div className="mt-1 truncate text-[10px] font-bold text-white" dir={ltr ? "ltr" : undefined}>{value}</div></div>;
+}
