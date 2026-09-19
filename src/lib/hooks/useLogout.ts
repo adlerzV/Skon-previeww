@@ -2,16 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useCallback } from "react";
-import { useCart } from "@/context/CartContext";
+import { clearAllCredentials } from "@/lib/secureCartStorage";
 
 export function useLogout() {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { clearSensitiveCredentials } = useCart();
 
   const logout = useCallback(async () => {
     setIsLoggingOut(true);
-    clearSensitiveCredentials();
+    clearAllCredentials();
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
@@ -19,7 +18,7 @@ export function useLogout() {
       router.refresh();
       setIsLoggingOut(false);
     }
-  }, [clearSensitiveCredentials, router]);
+  }, [router]);
 
   return { logout, isLoggingOut };
 }

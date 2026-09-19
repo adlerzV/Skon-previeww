@@ -136,6 +136,18 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const hasAuthToken = Boolean(request.cookies.get(AUTH_TOKEN_COOKIE)?.value);
+
+  // Reject unauthenticated Admin requests at the edge/proxy before the Admin
+  // layout or any React server component is evaluated. This keeps the hot path
+  // for logged-out visitors extremely cheap.
+  if (isAdminRoute && !hasAuthToken) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin-login";
+    return NextResponse.redirect(url);
+  }
+
   const refreshedToken = await applyAuthRefresh(request);
 
   const isNonRegionRoute =

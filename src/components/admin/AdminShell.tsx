@@ -1,31 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { Bell } from "lucide-react";
 import AdminSidebar from "./AdminSidebar";
-import AdminNotificationsBell from "./AdminNotificationsBell";
 import { AdminContextProvider, useAdminContext } from "./AdminContext";
 
-const TITLES: Array<{ prefix: string; title: string }> = [
-  { prefix: "/admin/orders/", title: "جزئیات سفارش" },
-  { prefix: "/admin/orders", title: "سفارش‌ها" },
-  { prefix: "/admin/tickets/", title: "جزئیات تیکت" },
-  { prefix: "/admin/tickets", title: "تیکت‌ها" },
-  { prefix: "/admin/gold", title: "برد طلا" },
-  { prefix: "/admin/reviews", title: "دیدگاه‌ها" },
-  { prefix: "/admin/customers/", title: "پرونده مشتری" },
-  { prefix: "/admin/customers", title: "مشتریان" },
-  { prefix: "/admin/cdkeys", title: "CD Keyها" },
-  { prefix: "/admin/engine", title: "موتور و زیرساخت" },
-  { prefix: "/admin/audit", title: "گزارش حسابرسی" },
-  { prefix: "/admin/admins", title: "مدیران و نقش‌ها" },
-  { prefix: "/admin/settings", title: "تنظیمات پروفایل" },
-];
-
-function getPageTitle(pathname: string) {
-  if (pathname === "/admin") return "پیشخوان";
-  return TITLES.find((item) => pathname.startsWith(item.prefix))?.title ?? "مرکز عملیات";
-}
+const AdminNotificationsBell = dynamic(() => import("./AdminNotificationsBell"), {
+  ssr: false,
+  loading: () => (
+    <button type="button" className="relative p-2.5 text-brand-m_khonsa" aria-label="اعلان‌ها" disabled>
+      <Bell size={18} />
+    </button>
+  ),
+});
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   return (
@@ -36,27 +24,32 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 }
 
 function AdminShellInner({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
   const { user, permissions, loading } = useAdminContext();
-  const currentUser = user ?? { name: "مدیر", email: "", avatarUrl: null };
+  const currentUser = user ?? {
+    name: loading ? "در حال بارگذاری" : "مدیر",
+    email: "",
+    avatarUrl: null,
+  };
 
   return (
-    <div className="admin-ui min-h-[100dvh] bg-brand-bg">
+    <div className="min-h-[100dvh] bg-brand-bg">
       <AdminSidebar user={currentUser} permissions={permissions} contextLoading={loading} />
 
-      <main className="min-h-[100dvh] lg:pr-[286px]">
-        <div className="mx-auto min-h-[100dvh] w-full max-w-[1760px]">
-          <header className="admin-topbar" dir="rtl">
-            <div className="min-w-0 pr-11 lg:pr-0">
-              <div className="text-[10px] font-bold text-brand-m_khonsa">Battleee Admin</div>
-              <div className="truncate text-base font-black text-white">{getPageTitle(pathname)}</div>
+      <main className="lg:pr-[264px] min-h-[100dvh]">
+        <div className="w-full max-w-[1800px] mx-auto min-h-[100dvh]">
+          <header className="sticky top-0 z-40 h-[60px] border-b border-brand-surface_hover bg-brand-bg/95 backdrop-blur-md px-4 lg:px-6 flex items-center justify-between gap-4" dir="rtl">
+            <div className="min-w-0">
+              <div className="text-[10px] font-black tracking-[0.16em] text-brand-blue uppercase">مرکز عملیات</div>
+              <div className="text-sm font-black text-white truncate">مدیریت Battleee</div>
             </div>
             <div className="shrink-0">
               <AdminNotificationsBell />
             </div>
           </header>
 
-          <div className="admin-content" dir="rtl">{children}</div>
+          <div className="p-4 pt-5 lg:p-6 min-h-[calc(100dvh-60px)]" dir="rtl">
+            {children}
+          </div>
         </div>
       </main>
     </div>

@@ -9,6 +9,7 @@ import AccountLayoutSkeleton from "@/components/account/AccountLayoutSkeleton";
 import LoginPageSkeleton from "@/components/account/LoginPageSkeleton";
 import { getCurrentUser } from "@/lib/auth/session";
 import { LOGGED_IN_COOKIE } from "@/lib/auth/constants";
+import CommerceProviders from "@/components/providers/CommerceProviders";
 
 async function AccountLayoutContent({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -58,8 +59,10 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const likelyLoggedIn = cookieStore.get(LOGGED_IN_COOKIE)?.value === "1";
 
   return (
-    <Suspense fallback={likelyLoggedIn ? <AccountLayoutSkeleton /> : <LoginPageSkeleton />}>
-      <AccountLayoutContent>{children}</AccountLayoutContent>
-    </Suspense>
+    <CommerceProviders>
+      <Suspense fallback={likelyLoggedIn ? <AccountLayoutSkeleton /> : <LoginPageSkeleton />}>
+        <AccountLayoutContent>{children}</AccountLayoutContent>
+      </Suspense>
+    </CommerceProviders>
   );
 }

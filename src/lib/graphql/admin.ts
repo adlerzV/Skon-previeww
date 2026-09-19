@@ -1,5 +1,31 @@
 import "server-only";
 
+export const ADMIN_BOOTSTRAP_QUERY = `
+  query GetAdminBootstrap($first: Int) {
+    viewer {
+      id
+      databaseId
+      name
+      email
+      avatarUrl
+      isStaff
+      adminPermissions
+    }
+    adminOpenTicketsCount
+    pendingReviewsCount
+    adminProcessingOrdersCount
+    adminUnreadNotificationsCount
+    adminOpenTickets(first: $first) {
+      id
+      databaseId
+      title
+      date
+      linkedOrderId
+      customerName
+    }
+  }
+`;
+
 export const ADMIN_DASHBOARD_SUMMARY_QUERY = `
   query GetAdminDashboardSummary {
     adminOpenTicketsCount

@@ -23,7 +23,21 @@ export interface HeaderViewerData {
 }
 
 const VIEWER_QUERY = `
-  query GetViewer($sessionId: String) {
+  query GetViewer {
+    viewer {
+      id
+      databaseId
+      name
+      email
+      avatarUrl
+      isStaff
+      hasManualPassword
+    }
+  }
+`;
+
+const ADMIN_VIEWER_QUERY = `
+  query GetAdminViewer {
     viewer {
       id
       databaseId
@@ -33,19 +47,17 @@ const VIEWER_QUERY = `
       isStaff
       hasManualPassword
       adminPermissions
-      activeSessionValid(sessionId: $sessionId)
     }
   }
 `;
 
 const VIEWER_WITH_WISHLIST_QUERY = `
-  query GetHeaderViewer($sessionId: String) {
+  query GetHeaderViewer {
     viewer {
       id
       name
       avatarUrl
       isStaff
-      activeSessionValid(sessionId: $sessionId)
       wishlistIds
     }
   }
@@ -67,9 +79,15 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
 
   try {
     const sessionId = await getSessionId();
-    const data = await fetchGraphQL(VIEWER_QUERY, { sessionId }, [], "no-store", token);
+    const data = await fetchGraphQL(
+      VIEWER_QUERY,
+      {},
+      [],
+      "no-store",
+      token,
+      sessionId ?? undefined,
+    );
     if (!data?.viewer?.id) return null;
-    if (data.viewer.activeSessionValid === false) return null;
 
     const viewer = data.viewer;
     const avatarId = viewer.avatarUrl ?? null;
@@ -81,7 +99,45 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       avatarUrl,
       isStaff: Boolean(viewer.isStaff),
       hasManualPassword: Boolean(viewer.hasManualPassword),
-      adminPermissions: Array.isArray(viewer.adminPermissions) ? viewer.adminPermissions.filter((permission: unknown): permission is string => typeof permission === "string") : [],
+      adminPermissions: [],
+    } as SessionUser;
+  } catch {
+    return null;
+  }
+});
+
+export const getCurrentAdminUser = cache(async (): Promise<SessionUser | null> => {
+  const token = await getAuthToken();
+  if (!token) return null;
+
+  try {
+    const sessionId = await getSessionId();
+    const data = await fetchGraphQL(
+      ADMIN_VIEWER_QUERY,
+      {},
+      [],
+      "no-store",
+      token,
+      sessionId ?? undefined,
+      undefined,
+      undefined,
+      { "X-BTL-Admin-Request": "1" },
+    );
+    if (!data?.viewer?.id || !data.viewer.isStaff) return null;
+
+    const viewer = data.viewer;
+    const avatarId = viewer.avatarUrl ?? null;
+    const avatarUrl = await resolveAvatarUrl(avatarId);
+
+    return {
+      ...viewer,
+      avatarId,
+      avatarUrl,
+      isStaff: true,
+      hasManualPassword: Boolean(viewer.hasManualPassword),
+      adminPermissions: Array.isArray(viewer.adminPermissions)
+        ? viewer.adminPermissions.filter((permission: unknown): permission is string => typeof permission === "string")
+        : [],
     } as SessionUser;
   } catch {
     return null;
@@ -94,7 +150,14 @@ export const getHeaderViewerData = cache(async (): Promise<HeaderViewerData> => 
 
   try {
     const sessionId = await getSessionId();
-    const data = await fetchGraphQL(VIEWER_WITH_WISHLIST_QUERY, { sessionId }, [], "no-store", token);
+    const data = await fetchGraphQL(
+      VIEWER_WITH_WISHLIST_QUERY,
+      {},
+      [],
+      "no-store",
+      token,
+      sessionId ?? undefined,
+    );
     const viewer = data?.viewer;
 
     if (!viewer?.id) return { user: null, wishlistIds: [] };
@@ -102,10 +165,6 @@ export const getHeaderViewerData = cache(async (): Promise<HeaderViewerData> => 
     const wishlistIds = Array.isArray(viewer.wishlistIds)
       ? viewer.wishlistIds.filter((id: unknown) => typeof id === "number")
       : [];
-
-    if (viewer.activeSessionValid === false) {
-      return { user: null, wishlistIds };
-    }
 
     const avatarUrl = await resolveAvatarUrl(viewer.avatarUrl ?? null);
 

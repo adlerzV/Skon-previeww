@@ -54,3 +54,15 @@ export function removeCredentials(itemId: string): void {
   } catch {
   }
 }
+export function clearAllCredentials(): void {
+  if (!isBrowser()) return;
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < window.sessionStorage.length; i += 1) {
+      const key = window.sessionStorage.key(i);
+      if (key?.startsWith(STORAGE_PREFIX)) keys.push(key);
+    }
+    keys.forEach((key) => window.sessionStorage.removeItem(key));
+  } catch {
+  }
+}

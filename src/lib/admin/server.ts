@@ -1,8 +1,9 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { getAuthToken, getCurrentUser } from "@/lib/auth/session";
+import { getAuthToken, getCurrentAdminUser } from "@/lib/auth/session";
 import { fetchGraphQL } from "@/lib/graphql";
 import {
+  ADMIN_BOOTSTRAP_QUERY,
   ADMIN_CLAIM_TICKET_MUTATION,
   ADMIN_CUSTOMER_QUERY,
   ADMIN_CUSTOMERS_QUERY,
@@ -24,16 +25,11 @@ import {
   ADMIN_TICKETS_QUERY,
   ADMIN_STAFF_USERS_QUERY,
   ADMIN_OPEN_TICKETS_QUERY,
-  ADMIN_CDKEY_STOCK_QUERY,
-  ADMIN_IMPORT_CDKEYS_MUTATION,
-  ADMIN_ASSIGN_CDKEYS_MUTATION,
-  ADMIN_ASSIGN_CDKEY_MANUALLY_MUTATION,
-  ADMIN_REVEAL_CDKEYS_MUTATION,
 } from "@/lib/graphql/admin";
 import type { AdminPermission } from "./permissions";
 
-export async function requireAdmin(permission?: AdminPermission): Promise<{ user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>; permissions: string[] }> {
-  const user = await getCurrentUser();
+export async function requireAdmin(permission?: AdminPermission): Promise<{ user: NonNullable<Awaited<ReturnType<typeof getCurrentAdminUser>>>; permissions: string[] }> {
+  const user = await getCurrentAdminUser();
   if (!user?.isStaff) redirect("/admin-login");
   const permissions = user.adminPermissions ?? [];
   if (permission && !permissions.includes(permission)) redirect("/admin");
@@ -42,25 +38,39 @@ export async function requireAdmin(permission?: AdminPermission): Promise<{ user
 
 async function adminFetch<T = any>(query: string, variables: Record<string, unknown> = {}) {
   const token = (await getAuthToken()) || undefined;
-  return fetchGraphQL(query, variables, [], "no-store", token) as T;
+  return fetchGraphQL(query, variables, [], "no-store", token, undefined, undefined, undefined, { "X-BTL-Admin-Request": "1" }) as T;
+}
+
+export async function getAdminBootstrap() {
+  // One authenticated GraphQL round-trip only. The bootstrap query contains
+  // the viewer + permissions + dashboard summary, so do not call requireAdmin()
+  // first and then repeat the same viewer request.
+  const data = await adminFetch(ADMIN_BOOTSTRAP_QUERY, { first: 6 });
+  const viewer = data?.viewer;
+  if (!viewer?.id || viewer?.isStaff !== true) throw new Error("Admin viewer unavailable");
+
+  return {
+    user: {
+      id: viewer.id,
+      databaseId: Number(viewer.databaseId ?? 0),
+      name: String(viewer.name ?? ""),
+      email: String(viewer.email ?? ""),
+      // Avatar is intentionally lazy on the Admin shell; settings fetch it only when opened.
+      avatarUrl: null,
+    },
+    permissions,
+    summary: {
+      openTicketsCount: Number(data?.adminOpenTicketsCount ?? 0),
+      pendingReviewsCount: Number(data?.pendingReviewsCount ?? 0),
+      processingOrdersCount: Number(data?.adminProcessingOrdersCount ?? 0),
+      unreadNotificationsCount: Number(data?.adminUnreadNotificationsCount ?? 0),
+    },
+    tickets: Array.isArray(data?.adminOpenTickets) ? data.adminOpenTickets : [],
+  };
 }
 
 export async function getAdminSummary() {
-  const { user, permissions } = await requireAdmin();
-  const summaryPromise = adminFetch(ADMIN_DASHBOARD_SUMMARY_QUERY);
-  const ticketsPromise = permissions.includes("tickets.read") ? adminFetch(ADMIN_OPEN_TICKETS_QUERY, { first: 8 }) : Promise.resolve(null);
-  const [summaryData, ticketsData] = await Promise.all([summaryPromise, ticketsPromise]);
-  return {
-    user: { id: user.id, databaseId: user.databaseId, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
-    permissions,
-    summary: {
-      openTicketsCount: Number(summaryData?.adminOpenTicketsCount ?? 0),
-      pendingReviewsCount: Number(summaryData?.pendingReviewsCount ?? 0),
-      processingOrdersCount: Number(summaryData?.adminProcessingOrdersCount ?? 0),
-      unreadNotificationsCount: Number(summaryData?.adminUnreadNotificationsCount ?? 0),
-    },
-    tickets: Array.isArray(ticketsData?.adminOpenTickets) ? ticketsData.adminOpenTickets : [],
-  };
+  return getAdminBootstrap();
 }
 
 export async function getAdminOrders(variables: Record<string, unknown> = {}) {
@@ -111,12 +121,6 @@ export async function getAdminStaffUsers() {
   return Array.isArray(data?.adminStaffUsers) ? data.adminStaffUsers : [];
 }
 
-export async function getAdminCdKeyStock(variables: Record<string, unknown> = {}) {
-  await requireAdmin("cdkeys.read");
-  const data = await adminFetch(ADMIN_CDKEY_STOCK_QUERY, { first: 30, status: "all", ...variables });
-  return data?.adminCdKeyStock ?? { nodes: [], pageInfo: { hasNextPage: false, endCursor: null }, summary: { available: 0, reserved: 0, used: 0, failed: 0, total: 0 } };
-}
-
 export async function getAdminNotifications(unreadOnly = false) {
   await requireAdmin();
   const data = await adminFetch(ADMIN_NOTIFICATIONS_QUERY, { first: 20, unreadOnly });
@@ -139,8 +143,4 @@ export const ADMIN_MUTATIONS = {
   addOrderNote: ADMIN_ADD_ORDER_NOTE_MUTATION,
   updateOrderStatus: ADMIN_UPDATE_ORDER_STATUS_MUTATION,
   updateOrderItemFulfillment: ADMIN_UPDATE_ORDER_ITEM_FULFILLMENT_MUTATION,
-  importCdKeys: ADMIN_IMPORT_CDKEYS_MUTATION,
-  assignCdKeys: ADMIN_ASSIGN_CDKEYS_MUTATION,
-  assignCdKeyManually: ADMIN_ASSIGN_CDKEY_MANUALLY_MUTATION,
-  revealCdKeys: ADMIN_REVEAL_CDKEYS_MUTATION,
 };

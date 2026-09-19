@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentAdminUser } from "@/lib/auth/session";
 
 export async function GET() {
-  const user = await getCurrentUser();
-  if (!user?.isStaff) {
-    return NextResponse.json({ error: "دسترسی غیرمجاز" }, { status: 403 });
-  }
+  const user = await getCurrentAdminUser();
+  if (!user) return NextResponse.json({ error: "دسترسی غیرمجاز" }, { status: 403 });
 
   return NextResponse.json({
     user: {
