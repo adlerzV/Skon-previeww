@@ -28,7 +28,40 @@ function checkMemoryRateLimit(key: string, max: number, windowMs: number): boole
   return true;
 }
 
-const hasUpstash = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+const isProduction = process.env.NODE_ENV === "production";
+const hasUpstash = Boolean(
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+);
+const allowMemoryFallback =
+  process.env.RATE_LIMIT_ALLOW_MEMORY_FALLBACK === "true" || !isProduction;
+const DISTRIBUTED_REQUIRED_PREFIXES = [
+  "auth-",
+  "admin-",
+  "phone-",
+  "password-",
+  "login-",
+  "checkout",
+  "revalidate",
+  "review-",
+  "review:",
+  "blog-comment-write",
+  "blog-comment-reply",
+  "blog-follow",
+  "blog-rate",
+  "ticket-",
+  "set-password-",
+  "profile:",
+  "reveal:",
+  "revoke-session",
+  "avatar-",
+  "wishlist:",
+];
+let warnedMissingUpstash = false;
+
+function requiresDistributedLimit(key: string): boolean {
+  return DISTRIBUTED_REQUIRED_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
 
 const redis = hasUpstash
   ? new Redis({
@@ -63,8 +96,23 @@ export function getClientIp(request: Request): string {
   );
 }
 
-export async function checkRateLimit(key: string, { max, windowMs }: { max: number; windowMs: number }): Promise<boolean> {
+export async function checkRateLimit(
+  key: string,
+  { max, windowMs }: { max: number; windowMs: number }
+): Promise<boolean> {
+  const distributedRequired = requiresDistributedLimit(key);
+
   if (!redis) {
+    if (isProduction && distributedRequired && !allowMemoryFallback) {
+      if (!warnedMissingUpstash) {
+        warnedMissingUpstash = true;
+        console.error(
+          "[rateLimit] Upstash is required in production for security-sensitive rate limits. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, or explicitly set RATE_LIMIT_ALLOW_MEMORY_FALLBACK=true."
+        );
+      }
+      return false;
+    }
+
     return checkMemoryRateLimit(key, max, windowMs);
   }
 
@@ -72,7 +120,12 @@ export async function checkRateLimit(key: string, { max, windowMs }: { max: numb
     const { success } = await getLimiter(max, windowMs).limit(key);
     return success;
   } catch (error) {
-    console.error("Upstash rate limit error, failing open to memory:", error);
+    if (isProduction && distributedRequired && !allowMemoryFallback) {
+      console.error("Upstash rate limit error; failing closed for security-sensitive action:", error);
+      return false;
+    }
+
+    console.error("Upstash rate limit error, falling back to memory:", error);
     return checkMemoryRateLimit(key, max, windowMs);
   }
 }
