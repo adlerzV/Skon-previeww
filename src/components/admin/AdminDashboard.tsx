@@ -49,7 +49,7 @@ export default function AdminDashboard() {
           <div className="grid gap-px bg-white/[.045] sm:grid-cols-2">
             {hasTickets ? <ActionTile href="/admin/tickets" icon={<LifeBuoy size={17} />} value={summary.openTicketsCount} title="تیکت باز" detail="ورود به صف پشتیبانی" /> : null}
             {hasReviews ? <ActionTile href="/admin/reviews" icon={<ClipboardCheck size={17} />} value={summary.pendingReviewsCount} title="دیدگاه منتظر بررسی" detail="ورود به صف بررسی" /> : null}
-            <ActionTile href="/admin/orders" icon={<ShoppingCart size={17} />} value={summary.processingOrdersCount} title="سفارش در حال پردازش" detail="بررسی fulfillment" />
+            <ActionTile href="/admin/orders" icon={<ShoppingCart size={17} />} value={summary.processingOrdersCount} title="سفارش در حال پردازش" detail="بررسی روند تحویل" />
             <ActionTile href="/admin" icon={<Bell size={17} />} value={summary.unreadNotificationsCount} title="اعلان جدید" detail="باز کردن اعلان‌ها از نوار بالا" />
           </div>
         </AdminCard>

@@ -38,10 +38,24 @@ export function AdminRefreshButton({ onClick, loading = false }: { onClick: () =
 }
 
 export function AdminCard({ children, className = "", id }: { children: ReactNode; className?: string; id?: string }) {
-  return <section id={id} className={`admin-card ${className}`}>{children}</section>;
+  return (
+    <section id={id} className={`admin-card ${className}`}>
+      {children}
+    </section>
+  );
 }
 
-export function AdminStatCard({ label, value, helper, tone = "default" }: { label: string; value: string | number; helper?: string; tone?: "default" | "info" | "warning" | "success" }) {
+export function AdminStatCard({
+  label,
+  value,
+  helper,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  helper?: string;
+  tone?: "default" | "info" | "warning" | "success";
+}) {
   return (
     <div className={`admin-stat admin-stat-${tone}`}>
       <div className="admin-stat-label">{label}</div>
@@ -60,6 +74,12 @@ export function AdminEmpty({ title = "موردی پیدا نشد.", description 
   );
 }
 
-export function AdminBadge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "info" | "success" | "warning" | "danger" }) {
+export function AdminBadge({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "info" | "success" | "warning" | "danger";
+}) {
   return <span className={`admin-badge admin-badge-${tone}`}>{children}</span>;
 }

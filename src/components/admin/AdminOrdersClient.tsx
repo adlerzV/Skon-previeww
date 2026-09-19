@@ -49,7 +49,7 @@ export default function AdminOrdersClient({ initial, permissions = [] }: { initi
 
   return (
     <AdminPage>
-      <AdminPageIntro eyebrow="عملیات" title="سفارش‌ها" description="وضعیت پرداخت و fulfillment را سریع بررسی کن." action={<AdminRefreshButton onClick={() => load()} loading={loading} />} />
+      <AdminPageIntro eyebrow="عملیات" title="سفارش‌ها" description="وضعیت پرداخت و روند تحویل را سریع بررسی کن." action={<AdminRefreshButton onClick={() => load()} loading={loading} />} />
 
       <AdminCard className="mb-4 p-3">
         <div className="grid gap-2 md:grid-cols-[1fr_170px_110px]">

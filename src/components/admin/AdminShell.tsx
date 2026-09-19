@@ -9,7 +9,7 @@ import { AdminContextProvider, useAdminContext } from "./AdminContext";
 const AdminNotificationsBell = dynamic(() => import("./AdminNotificationsBell"), {
   ssr: false,
   loading: () => (
-    <button type="button" className="relative p-2.5 text-brand-m_khonsa" aria-label="اعلان‌ها" disabled>
+    <button type="button" className="admin-icon-button" aria-label="اعلان‌ها" disabled>
       <Bell size={18} />
     </button>
   ),
@@ -32,22 +32,24 @@ function AdminShellInner({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="admin-ui min-h-[100dvh] bg-brand-bg">
+    <div className="admin-ui min-h-[100dvh]" dir="rtl">
       <AdminSidebar user={currentUser} permissions={permissions} />
 
-      <main className="lg:pr-[264px] min-h-[100dvh]">
-        <div className="w-full max-w-[1800px] mx-auto min-h-[100dvh]">
-          <header className="sticky top-0 z-40 h-[60px] border-b border-brand-surface_hover bg-brand-bg/95 backdrop-blur-md px-4 lg:px-6 flex items-center justify-between gap-4" dir="rtl">
-            <div className="min-w-0">
-              <div className="text-[10px] font-black tracking-[0.16em] text-brand-blue uppercase">مرکز عملیات</div>
-              <div className="text-sm font-black text-white truncate">مدیریت Battleee</div>
+      <main className="admin-main">
+        <div className="admin-main-inner">
+          <header className="admin-topbar">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="min-w-0">
+                <div className="admin-eyebrow">مرکز عملیات</div>
+                <div className="admin-topbar-title">مدیریت فروشگاه</div>
+              </div>
             </div>
-            <div className="shrink-0">
+            <div className="admin-topbar-actions">
               <AdminNotificationsBell />
             </div>
           </header>
 
-          <div className="p-4 pt-5 lg:p-6 min-h-[calc(100dvh-60px)]" dir="rtl">
+          <div className="admin-content">
             {children}
           </div>
         </div>
