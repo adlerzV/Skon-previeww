@@ -37,8 +37,8 @@ export function AdminRefreshButton({ onClick, loading = false }: { onClick: () =
   );
 }
 
-export function AdminCard({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`admin-card ${className}`}>{children}</section>;
+export function AdminCard({ children, className = "", id }: { children: ReactNode; className?: string; id?: string }) {
+  return <section id={id} className={`admin-card ${className}`}>{children}</section>;
 }
 
 export function AdminStatCard({ label, value, helper, tone = "default" }: { label: string; value: string | number; helper?: string; tone?: "default" | "info" | "warning" | "success" }) {
