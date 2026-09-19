@@ -8,7 +8,6 @@ if (process.env.ANALYZE === 'true') {
     const bundleAnalyzer = require('@next/bundle-analyzer').default;
     withBundleAnalyzer = bundleAnalyzer({ enabled: true });
   } catch {
-    // Bundle analysis remains optional; a missing dev-only package must not break production builds.
   }
 }
 
@@ -44,7 +43,7 @@ const nextConfig = {
       384,
     ],
 
-    qualities: [60, 70, 75, 80, 85, 90],
+    qualities: [60, 65, 70, 75, 80, 85, 90],
 
     minimumCacheTTL: 60 * 60 * 24 * 30,
 
@@ -52,10 +51,17 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'api.arena2battle.com',
+        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'arena2battle.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.arena2battle.com',
+        pathname: '/**',
       },
     ],
   },

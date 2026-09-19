@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 
 const yekanFont = localFont({
-  src: "./fonts/Yekan.woff2",
+  src: "./fonts/Yekan.woff",
   variable: "--font-yekan",
   display: "swap",
   preload: true,
