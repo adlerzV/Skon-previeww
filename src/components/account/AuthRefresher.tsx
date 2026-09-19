@@ -4,60 +4,77 @@ import { useEffect, useRef } from "react";
 import { getClientCookie } from "@/lib/cookies";
 import { LOGGED_IN_COOKIE } from "@/lib/auth/constants";
 
+// The proxy is the primary refresh path on navigation. The client only performs
+// a low-frequency safety refresh while a user keeps a page open for many hours.
 const REFRESH_INTERVAL_MS = 4 * 60 * 60 * 1000;
-const IDLE_TIMEOUT_MS = 6000;
+const LOCK_TIMEOUT_MS = 30_000;
+const FAILURE_COOLDOWN_MS = 60_000;
+const CLIENT_LOCK_KEY = "a2b_auth_refresh_lock";
 
-async function refreshToken() {
-  try {
-    await fetch("/api/auth/refresh", { method: "POST" });
-  } catch {
-  }
+function isRefreshNeeded(): boolean {
+  // The access token is HttpOnly, so freshness is deliberately checked on the
+  // server by /api/auth/refresh. The client only schedules a low-frequency
+  // safety check while the page remains open for many hours.
+  return getClientCookie(LOGGED_IN_COOKIE) === "1";
 }
 
-function whenIdle(cb: () => void): () => void {
-  if (typeof window === "undefined") return () => {};
-
-  const ric = (window as unknown as {
-    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-    cancelIdleCallback?: (id: number) => void;
-  }).requestIdleCallback;
-
-  if (ric) {
-    const id = ric(cb, { timeout: IDLE_TIMEOUT_MS });
-    return () => (window as unknown as { cancelIdleCallback?: (id: number) => void })
-      .cancelIdleCallback?.(id);
+function acquireClientLock(): (() => void) | null {
+  try {
+    const raw = window.localStorage.getItem(CLIENT_LOCK_KEY);
+    const existing = raw ? Number(raw) : 0;
+    const now = Date.now();
+    if (Number.isFinite(existing) && existing > now) return null;
+    window.localStorage.setItem(CLIENT_LOCK_KEY, String(now + LOCK_TIMEOUT_MS));
+    return () => {
+      try {
+        if (Number(window.localStorage.getItem(CLIENT_LOCK_KEY)) > now) {
+          window.localStorage.removeItem(CLIENT_LOCK_KEY);
+        }
+      } catch {}
+    };
+  } catch {
+    return () => {};
   }
-
-  const id = window.setTimeout(cb, IDLE_TIMEOUT_MS);
-  return () => window.clearTimeout(id);
 }
 
 export default function AuthRefresher() {
+  const lastFailureRef = useRef(0);
   const isRefreshingRef = useRef(false);
 
   useEffect(() => {
-    const isLoggedIn = () => getClientCookie(LOGGED_IN_COOKIE) === "1";
-
     const safeRefresh = async () => {
-      if (!isLoggedIn() || isRefreshingRef.current) return;
+      if (isRefreshingRef.current) return;
+      if (getClientCookie(LOGGED_IN_COOKIE) !== "1") return;
+      if (!isRefreshNeeded()) return;
+      if (Date.now() - lastFailureRef.current < FAILURE_COOLDOWN_MS) return;
+
+      const release = acquireClientLock();
+      if (!release) return;
+
       isRefreshingRef.current = true;
-      await refreshToken();
-      isRefreshingRef.current = false;
+      try {
+        const response = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { "X-Requested-With": "a2b-auth-refresh" },
+        });
+        if (!response.ok) lastFailureRef.current = Date.now();
+      } catch {
+        lastFailureRef.current = Date.now();
+      } finally {
+        isRefreshingRef.current = false;
+        release();
+      }
     };
 
-    const cancelIdle = whenIdle(() => { void safeRefresh(); });
+    // Do not refresh on initial mount or visibility changes. The proxy already
+    // handles navigation-time refreshes, which avoids refresh storms on every page load.
+    const interval = window.setInterval(() => {
+      void safeRefresh();
+    }, REFRESH_INTERVAL_MS);
 
-    const interval = setInterval(safeRefresh, REFRESH_INTERVAL_MS);
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") safeRefresh();
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      cancelIdle();
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
+    return () => window.clearInterval(interval);
   }, []);
 
   return null;
