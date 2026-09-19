@@ -61,13 +61,13 @@ export default function AdminNotificationsBell() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="admin-icon-button"
+        className="relative p-2.5 text-brand-m_khonsa hover:text-white hover:bg-white/5 transition-colors"
         aria-label="اعلان‌ها"
         aria-expanded={open}
       >
         <Bell size={18} />
         {unread > 0 && (
-          <span className="absolute top-0 right-0 admin-notification-count">
+          <span className="absolute top-0 right-0 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-brand-zard text-black text-[9px] font-black">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -76,14 +76,14 @@ export default function AdminNotificationsBell() {
       {open && (
         <>
           <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="بستن اعلان‌ها" onClick={() => setOpen(false)} />
-          <div className="admin-notification-popover">
-            <div className="admin-popover-head">
+          <div className="absolute top-full left-0 mt-2 z-50 w-[min(380px,calc(100vw-24px))] max-h-[min(500px,calc(100dvh-90px))] overflow-hidden bg-brand-surface border border-brand-surface_hover shadow-2xl">
+            <div className="flex items-center justify-between gap-3 p-3 border-b border-brand-surface_hover">
               <div className="text-xs font-black text-white">اعلان‌ها</div>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={markAll} className="admin-popover-action">
-                  <Check size={12} /> همه را خوانده‌شده کن
+                <button type="button" onClick={markAll} className="inline-flex items-center gap-1 text-[10px] text-brand-blue font-bold">
+                  <Check size={12} /> همه خوانده
                 </button>
-                <button type="button" onClick={() => setOpen(false)} className="admin-popover-close" aria-label="بستن">
+                <button type="button" onClick={() => setOpen(false)} className="text-brand-m_khonsa hover:text-white" aria-label="بستن">
                   <X size={14} />
                 </button>
               </div>

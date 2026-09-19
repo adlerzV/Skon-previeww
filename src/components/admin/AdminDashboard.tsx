@@ -31,7 +31,7 @@ export default function AdminDashboard() {
         action={<AdminRefreshButton onClick={handleRefresh} loading={refreshing} />}
       />
 
-      <div className="admin-stat-grid">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <AdminStatCard label="سفارش‌های در حال پردازش" value={loading ? "—" : summary.processingOrdersCount} helper="نیازمند پیگیری" tone="info" />
         <AdminStatCard label="تیکت‌های باز" value={loading ? "—" : summary.openTicketsCount} helper="صف پشتیبانی" tone={summary.openTicketsCount ? "warning" : "default"} />
         <AdminStatCard label="دیدگاه‌های منتظر بررسی" value={loading ? "—" : summary.pendingReviewsCount} helper="صف بررسی" tone={summary.pendingReviewsCount ? "warning" : "default"} />
@@ -49,7 +49,7 @@ export default function AdminDashboard() {
           <div className="grid gap-px bg-white/[.045] sm:grid-cols-2">
             {hasTickets ? <ActionTile href="/admin/tickets" icon={<LifeBuoy size={17} />} value={summary.openTicketsCount} title="تیکت باز" detail="ورود به صف پشتیبانی" /> : null}
             {hasReviews ? <ActionTile href="/admin/reviews" icon={<ClipboardCheck size={17} />} value={summary.pendingReviewsCount} title="دیدگاه منتظر بررسی" detail="ورود به صف بررسی" /> : null}
-            <ActionTile href="/admin/orders" icon={<ShoppingCart size={17} />} value={summary.processingOrdersCount} title="سفارش در حال پردازش" detail="بررسی روند تحویل" />
+            <ActionTile href="/admin/orders" icon={<ShoppingCart size={17} />} value={summary.processingOrdersCount} title="سفارش در حال پردازش" detail="بررسی fulfillment" />
             <ActionTile href="/admin" icon={<Bell size={17} />} value={summary.unreadNotificationsCount} title="اعلان جدید" detail="باز کردن اعلان‌ها از نوار بالا" />
           </div>
         </AdminCard>
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
       <div className="mt-4 flex flex-wrap items-center gap-2 text-[10px] text-brand-m_khonsa">
         <AdminBadge tone="success">احراز هویت</AdminBadge>
         <AdminBadge tone="success">نشست امن</AdminBadge>
-        <AdminBadge tone="success">Permission فعال</AdminBadge>
+        <AdminBadge tone="success">مجوزها فعال هستند</AdminBadge>
         <span>داده‌های سنگین فقط هنگام ورود به ماژول مربوطه بارگذاری می‌شوند.</span>
       </div>
     </AdminPage>
@@ -99,7 +99,7 @@ function ActionTile({ href, icon, value, title, detail }: { href: string; icon: 
   return (
     <Link prefetch={false} href={href} className="group bg-brand-surface p-4 transition hover:bg-white/[.025]">
       <div className="flex items-center justify-between gap-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue">{icon}</span>
+        <span className="flex h-9 w-9 items-center justify-center rounded-[5px] bg-brand-blue/10 text-brand-blue">{icon}</span>
         <span className="text-2xl font-black text-white">{value.toLocaleString("fa-IR")}</span>
       </div>
       <div className="mt-3 text-xs font-black text-white">{title}</div>

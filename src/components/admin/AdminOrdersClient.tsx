@@ -49,34 +49,34 @@ export default function AdminOrdersClient({ initial, permissions = [] }: { initi
 
   return (
     <AdminPage>
-      <AdminPageIntro eyebrow="عملیات" title="سفارش‌ها" description="وضعیت پرداخت و روند تحویل را سریع بررسی کن." action={<AdminRefreshButton onClick={() => load()} loading={loading} />} />
+      <AdminPageIntro eyebrow="عملیات" title="سفارش‌ها" description="وضعیت پرداخت و fulfillment را سریع بررسی کن." action={<AdminRefreshButton onClick={() => load()} loading={loading} />} />
 
       <AdminCard className="mb-4 p-3">
         <div className="grid gap-2 md:grid-cols-[1fr_170px_110px]">
-          <label className="admin-search-wrap">
+          <label className="flex min-h-10 items-center gap-2 rounded-[5px] border border-brand-surface_hover bg-brand-bg px-3 focus-within:border-brand-blue focus-within:ring-2 focus-within:ring-brand-blue/20">
             <Search size={15} className="text-brand-m_khonsa" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && void load()} placeholder="شناسه سفارش، نام یا ایمیل" className="admin-input border-0 bg-transparent px-0 shadow-none focus:shadow-none" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && void load()} placeholder="شناسه سفارش، نام یا ایمیل" className="w-full min-h-10 rounded-[5px] border border-brand-surface_hover bg-brand-bg px-3 text-xs text-white outline-none placeholder:text-brand-m_khonsa focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 border-0 bg-transparent px-0 shadow-none focus:shadow-none" />
           </label>
-          <select value={status} onChange={(event) => setStatus(event.target.value)} className="admin-input">
+          <select value={status} onChange={(event) => setStatus(event.target.value)} className="w-full min-h-10 rounded-[5px] border border-brand-surface_hover bg-brand-bg px-3 text-xs text-white outline-none placeholder:text-brand-m_khonsa focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20">
             <option value="processing">در حال پردازش</option><option value="pending">در انتظار</option><option value="completed">تکمیل‌شده</option><option value="cancelled">لغوشده</option><option value="all">همه</option>
           </select>
-          <button type="button" onClick={() => void load()} className="admin-button admin-button-primary">جستجو</button>
+          <button type="button" onClick={() => void load()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[5px] px-3 text-xs font-black transition disabled:pointer-events-none disabled:opacity-50 bg-brand-blue text-white hover:brightness-110">جستجو</button>
         </div>
       </AdminCard>
 
-      <div className="admin-table-wrap desktop-only">
-        <table className="admin-table"><thead><tr><th>سفارش</th><th>مشتری</th><th>وضعیت</th><th>پرداخت</th><th>تحویل</th><th>مبلغ</th><th>تاریخ</th><th /></tr></thead>
+      <div className="overflow-hidden rounded-[5px] border border-white/[.06] bg-brand-surface hidden lg:block">
+        <table className="w-full border-collapse text-right [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-white/[.06] [&_th]:px-3.5 [&_th]:py-3 [&_th]:text-[9px] [&_th]:font-black [&_th]:text-brand-m_khonsa [&_td]:border-b [&_td]:border-white/[.06] [&_td]:px-3.5 [&_td]:py-3 [&_td]:align-middle [&_tr:last-child_td]:border-b-0 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-white/[.02]"><thead><tr><th>سفارش</th><th>مشتری</th><th>وضعیت</th><th>پرداخت</th><th>تحویل</th><th>مبلغ</th><th>تاریخ</th><th /></tr></thead>
           <tbody>{data.nodes.map((order) => <tr key={order.databaseId}><td><div className="text-xs font-black text-white">#{order.orderNumber}</div><div className="mt-1 text-[9px] text-brand-m_khonsa">شناسه {order.databaseId}</div></td><td><div className="text-xs font-bold text-white">{order.customerName || "—"}</div><div className="mt-1 text-[9px] text-brand-m_khonsa" dir="ltr">{order.customerEmail || "—"}</div></td><td><AdminBadge tone={order.status === "completed" ? "success" : "info"}>{statusLabel[order.status] ?? order.status}</AdminBadge></td><td><AdminBadge tone={order.paymentStatus === "paid" ? "success" : "warning"}>{order.paymentStatus === "paid" ? "پرداخت‌شده" : order.paymentStatus}</AdminBadge></td><td><span className="text-[11px] text-white">{fulfillmentLabel[order.fulfillmentStatus] ?? order.fulfillmentStatus}</span></td><td><span className="text-[11px] font-black text-white" dir="ltr">{order.total} {order.currency}</span></td><td><span className="text-[9px] text-brand-m_khonsa" dir="ltr">{order.date ? new Date(order.date).toLocaleString("fa-IR") : "—"}</span></td><td><Link href={`/admin/orders/${order.databaseId}`} className="inline-flex items-center gap-1 text-[10px] font-black text-brand-blue"><Eye size={14}/> باز کردن</Link></td></tr>)}</tbody>
         </table>
         {data.nodes.length === 0 && <AdminEmpty title="سفارشی با این فیلتر پیدا نشد." />}
       </div>
 
-      <div className="mobile-only-card space-y-2">
-        {data.nodes.map((order) => <Link key={order.databaseId} href={`/admin/orders/${order.databaseId}`} className="admin-card block p-4"><div className="flex items-start justify-between gap-3"><div><div className="text-sm font-black text-white">#{order.orderNumber}</div><div className="mt-1 text-[10px] text-brand-m_khonsa">{order.customerName || "—"}</div></div><AdminBadge tone={order.status === "completed" ? "success" : "info"}>{statusLabel[order.status] ?? order.status}</AdminBadge></div><div className="mt-4 grid grid-cols-2 gap-3"><Mini label="پرداخت" value={order.paymentStatus === "paid" ? "پرداخت‌شده" : order.paymentStatus}/><Mini label="تحویل" value={fulfillmentLabel[order.fulfillmentStatus] ?? order.fulfillmentStatus}/><Mini label="مبلغ" value={`${order.total} ${order.currency}`} ltr/><Mini label="تاریخ" value={order.date ? new Date(order.date).toLocaleDateString("fa-IR") : "—"}/></div></Link>)}
+      <div className="lg:hidden space-y-2">
+        {data.nodes.map((order) => <Link key={order.databaseId} href={`/admin/orders/${order.databaseId}`} className="rounded-[5px] border border-white/[.06] bg-brand-surface block p-4"><div className="flex items-start justify-between gap-3"><div><div className="text-sm font-black text-white">#{order.orderNumber}</div><div className="mt-1 text-[10px] text-brand-m_khonsa">{order.customerName || "—"}</div></div><AdminBadge tone={order.status === "completed" ? "success" : "info"}>{statusLabel[order.status] ?? order.status}</AdminBadge></div><div className="mt-4 grid grid-cols-2 gap-3"><Mini label="پرداخت" value={order.paymentStatus === "paid" ? "پرداخت‌شده" : order.paymentStatus}/><Mini label="تحویل" value={fulfillmentLabel[order.fulfillmentStatus] ?? order.fulfillmentStatus}/><Mini label="مبلغ" value={`${order.total} ${order.currency}`} ltr/><Mini label="تاریخ" value={order.date ? new Date(order.date).toLocaleDateString("fa-IR") : "—"}/></div></Link>)}
         {data.nodes.length === 0 && <AdminEmpty title="سفارشی پیدا نشد." />}
       </div>
 
-      {data.pageInfo.hasNextPage && <div className="mt-4 flex justify-center"><button type="button" onClick={() => void load(data.pageInfo.endCursor)} disabled={loading} className="admin-button admin-button-muted"><ChevronLeft size={15}/> صفحه بعد</button></div>}
+      {data.pageInfo.hasNextPage && <div className="mt-4 flex justify-center"><button type="button" onClick={() => void load(data.pageInfo.endCursor)} disabled={loading} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[5px] px-3 text-xs font-black transition disabled:pointer-events-none disabled:opacity-50 border border-brand-surface_hover bg-brand-surface_hover/60 text-white hover:bg-brand-surface_hover"><ChevronLeft size={15}/> صفحه بعد</button></div>}
       {!effectivePermissions.includes("orders.write") && <div className="mt-3 text-[10px] text-brand-m_khonsa">این حساب فقط مجوز مشاهده دارد.</div>}
     </AdminPage>
   );
