@@ -1,0 +1,20 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { FileText, ShieldCheck } from "lucide-react";
+import { AdminCard, AdminEmpty, AdminPage, AdminPageIntro, AdminRefreshButton } from "./AdminUi";
+
+type Entry = { id:number; adminUserId:number; adminName:string; action:string; entityType:string; entityId:number|null; result:string; metadata:string|null; createdAt:string };
+function fmt(value:string){ return value ? new Date(value.replace(" ","T")+"Z").toLocaleString("fa-IR") : "—"; }
+
+export default function AdminAuditClient(){
+ const [items,setItems]=useState<Entry[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[result,setResult]=useState("");
+ const refresh=useCallback(async()=>{setLoading(true);setError("");try{const q=result?`?result=${encodeURIComponent(result)}`:"";const r=await fetch(`/api/admin/audit${q}`,{cache:"no-store"});const body=await r.json();if(!r.ok)throw new Error(body?.error||"خطا در دریافت Audit Log");setItems(Array.isArray(body)?body:[])}catch(e){setError(e instanceof Error?e.message:"خطا در دریافت Audit Log")}finally{setLoading(false)}},[result]);
+ useEffect(()=>{void refresh()},[refresh]);
+ return <AdminPage className="max-w-[1280px]">
+  <AdminPageIntro eyebrow="فاز ۵ · Audit" title="گزارش حسابرسی" description="عملیات حساس پنل و Engine با نتیجه و شناسه مدیر ثبت می‌شوند." action={<AdminRefreshButton onClick={()=>void refresh()} loading={loading}/>}/>
+  <div className="mb-4 flex flex-wrap gap-2"><button type="button" onClick={()=>setResult("")} className={`admin-button ${!result?"admin-button-primary":"admin-button-muted"}`}>همه</button><button type="button" onClick={()=>setResult("success")} className={`admin-button ${result==="success"?"admin-button-primary":"admin-button-muted"}`}>موفق</button><button type="button" onClick={()=>setResult("failed")} className={`admin-button ${result==="failed"?"admin-button-primary":"admin-button-muted"}`}>ناموفق</button></div>
+  {error&&<div className="mb-4 rounded-xl border border-red-400/20 bg-red-500/5 p-4 text-xs text-red-200">{error}</div>}
+  <AdminCard className="overflow-hidden"><div className="flex items-center gap-3 border-b border-white/[.06] p-5"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue"><FileText size={17}/></span><div><h2 className="text-sm font-black text-white">آخرین عملیات</h2><p className="mt-1 text-[10px] text-brand-m_khonsa">جدیدترین ۱۰۰ رویداد</p></div></div>{loading&&!items.length?<AdminEmpty title="در حال دریافت لاگ‌ها..."/>:!items.length?<AdminEmpty title="لاگی پیدا نشد."/>:<div className="overflow-x-auto"><table className="w-full text-right text-xs"><thead><tr className="border-b border-white/[.06] text-brand-m_khonsa"><th className="px-5 py-3">زمان</th><th>مدیر</th><th>عملیات</th><th>Entity</th><th>نتیجه</th><th className="px-5">Metadata</th></tr></thead><tbody>{items.map(i=><tr key={i.id} className="border-b border-white/[.04] align-top"><td className="px-5 py-3 whitespace-nowrap text-brand-m_khonsa" dir="ltr">{fmt(i.createdAt)}</td><td className="py-3"><div className="font-bold text-white">{i.adminName||`User #${i.adminUserId}`}</div><div className="text-[10px] text-brand-m_khonsa">ID {i.adminUserId}</div></td><td className="py-3 font-mono text-[11px] text-white" dir="ltr">{i.action}</td><td className="py-3 text-brand-m_khonsa">{i.entityType||"—"}{i.entityId?` #${i.entityId}`:""}</td><td className="py-3">{i.result==="success"?<span className="inline-flex items-center gap-1 text-emerald-300"><ShieldCheck size={13}/> موفق</span>:<span className="text-red-300">ناموفق</span>}</td><td className="px-5 py-3 max-w-[360px]"><pre className="whitespace-pre-wrap break-words text-[10px] text-brand-m_khonsa" dir="ltr">{i.metadata||"—"}</pre></td></tr>)}</tbody></table></div>}</AdminCard>
+ </AdminPage>
+}

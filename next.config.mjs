@@ -1,8 +1,16 @@
-import bundleAnalyzer from '@next/bundle-analyzer';
+import { createRequire } from 'node:module';
 
-const withBundleAnalyzer = bundleAnalyzer({
-  enabled: process.env.ANALYZE === 'true',
-});
+const require = createRequire(import.meta.url);
+let withBundleAnalyzer = (config) => config;
+
+if (process.env.ANALYZE === 'true') {
+  try {
+    const bundleAnalyzer = require('@next/bundle-analyzer').default;
+    withBundleAnalyzer = bundleAnalyzer({ enabled: true });
+  } catch {
+    // Bundle analysis remains optional; a missing dev-only package must not break production builds.
+  }
+}
 
 const nextConfig = {
   poweredByHeader: false,
@@ -39,8 +47,6 @@ const nextConfig = {
     qualities: [60, 70, 75, 80, 85, 90],
 
     minimumCacheTTL: 60 * 60 * 24 * 30,
-
-    dangerouslyAllowLocalIP: true,
 
     remotePatterns: [
       {

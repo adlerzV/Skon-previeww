@@ -14,14 +14,14 @@ interface Props {
   permissions: string[];
 }
 
-const ITEMS: Array<{ href: string; label: string; icon: typeof LayoutDashboard; permission?: AdminPermission; exact?: boolean }> = [
+const ITEMS: Array<{ href: string; label: string; icon: typeof LayoutDashboard; permission?: AdminPermission; anyPermissions?: AdminPermission[]; exact?: boolean }> = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart, permission: ADMIN_PERMISSIONS.ORDERS_READ },
   { href: "/admin/tickets", label: "Tickets", icon: LifeBuoy, permission: ADMIN_PERMISSIONS.TICKETS_READ },
   { href: "/admin/gold", label: "Gold Board", icon: Activity, permission: ADMIN_PERMISSIONS.GOLD_READ },
   { href: "/admin/reviews", label: "Reviews", icon: ClipboardList, permission: ADMIN_PERMISSIONS.REVIEWS_MODERATE },
   { href: "/admin/customers", label: "Customers", icon: Users, permission: ADMIN_PERMISSIONS.USERS_READ },
-  { href: "/admin/engine", label: "Engine", icon: Package, permission: ADMIN_PERMISSIONS.PRICING_READ },
+  { href: "/admin/engine", label: "Engine", icon: Package, anyPermissions: [ADMIN_PERMISSIONS.PRICING_READ, ADMIN_PERMISSIONS.ENGINE_SCHEDULER, ADMIN_PERMISSIONS.ENGINE_RATES, ADMIN_PERMISSIONS.ENGINE_REVALIDATION] },
   { href: "/admin/audit", label: "Audit Log", icon: FileText, permission: ADMIN_PERMISSIONS.AUDIT_READ },
   { href: "/admin/settings", label: "Settings", icon: ShieldCheck, permission: ADMIN_PERMISSIONS.SETTINGS_MANAGE },
   { href: "/admin/admins", label: "Admins & Roles", icon: UserRound, permission: ADMIN_PERMISSIONS.USERS_WRITE },
@@ -31,7 +31,7 @@ export default function AdminSidebar({ user, permissions }: Props) {
   const pathname = usePathname();
   const { logout, isLoggingOut } = useLogout();
   const [open, setOpen] = useState(false);
-  const visible = ITEMS.filter((item) => !item.permission || permissions.includes(item.permission));
+  const visible = ITEMS.filter((item) => !item.permission && !item.anyPermissions || (item.permission ? permissions.includes(item.permission) : item.anyPermissions?.some((permission) => permissions.includes(permission))));
 
   const nav = (
     <div className="flex h-full w-[280px] flex-col bg-brand-surface border-l border-brand-surface_hover">

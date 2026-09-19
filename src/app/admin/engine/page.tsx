@@ -1,2 +1,2 @@
-import AdminModulePlaceholder from "@/components/admin/AdminModulePlaceholder";
-export default function Page() { return <AdminModulePlaceholder title="موتور و زیرساخت" phase="فاز ۵" />; }
+import AdminEngineClient from "@/components/admin/AdminEngineClient";
+export default function Page() { return <AdminEngineClient />; }

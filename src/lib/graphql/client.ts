@@ -88,8 +88,8 @@ export async function fetchGraphQL(
       ...(boundSessionId ? { "X-BTL-Session-ID": boundSessionId } : {}),
       ...(bootstrapProof ? { "X-BTL-Session-Bootstrap": bootstrapProof } : {}),
       ...(previousAuthToken ? { "X-BTL-Previous-Authorization": `Bearer ${previousAuthToken}` } : {}),
-      ...extraHeaders,
       ...(hostHeader ? { Host: hostHeader } : {}),
+      ...extraHeaders,
     },
     body: JSON.stringify({ query, variables }),
   };

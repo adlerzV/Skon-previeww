@@ -19,7 +19,7 @@ export interface SessionUser {
 
 export interface HeaderViewerData {
   user: { name: string; avatarUrl: string | null; isStaff: boolean } | null;
-  wishlistIds: number[];
+  wishlistCount: number;
 }
 
 const VIEWER_QUERY = `
@@ -58,7 +58,7 @@ const VIEWER_WITH_WISHLIST_QUERY = `
       name
       avatarUrl
       isStaff
-      wishlistIds
+      wishlistCount
     }
   }
 `;
@@ -146,7 +146,7 @@ export const getCurrentAdminUser = cache(async (): Promise<SessionUser | null> =
 
 export const getHeaderViewerData = cache(async (): Promise<HeaderViewerData> => {
   const token = await getAuthToken();
-  if (!token) return { user: null, wishlistIds: [] };
+  if (!token) return { user: null, wishlistCount: 0 };
 
   try {
     const sessionId = await getSessionId();
@@ -160,19 +160,15 @@ export const getHeaderViewerData = cache(async (): Promise<HeaderViewerData> => 
     );
     const viewer = data?.viewer;
 
-    if (!viewer?.id) return { user: null, wishlistIds: [] };
-
-    const wishlistIds = Array.isArray(viewer.wishlistIds)
-      ? viewer.wishlistIds.filter((id: unknown) => typeof id === "number")
-      : [];
+    if (!viewer?.id) return { user: null, wishlistCount: 0 };
 
     const avatarUrl = await resolveAvatarUrl(viewer.avatarUrl ?? null);
 
     return {
       user: { name: viewer.name, avatarUrl, isStaff: Boolean(viewer.isStaff) },
-      wishlistIds,
+      wishlistCount: Number(viewer.wishlistCount) || 0,
     };
   } catch {
-    return { user: null, wishlistIds: [] };
+    return { user: null, wishlistCount: 0 };
   }
 });

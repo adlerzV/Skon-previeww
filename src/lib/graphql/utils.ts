@@ -302,25 +302,32 @@ export const formatProducts = (
           target.hasGiftOrCode ||
           finalPrice != null;
 
+      const {
+        shortDescription,
+        description,
+        secondaryGallery,
+        ...archiveSafeProduct
+      } = product;
+
       formattedProducts.push({
-        ...product,
-        shortDescription: sanitizeHtml(
-          product.shortDescription
-        ),
-        description: sanitizeHtml(
-          product.description
-        ),
-        secondaryGallery: product.secondaryGallery
-          ? product.secondaryGallery.map((item) => ({
-              ...item,
-              description:
-                sanitizeHtml(item.description) ??
-                item.description,
-            }))
-          : product.secondaryGallery,
+        ...archiveSafeProduct,
+        ...(archiveMode
+          ? {}
+          : {
+              shortDescription: sanitizeHtml(shortDescription),
+              description: sanitizeHtml(description),
+              secondaryGallery: secondaryGallery
+                ? secondaryGallery.map((item) => ({
+                    ...item,
+                    description:
+                      sanitizeHtml(item.description) ??
+                      item.description,
+                  }))
+                : secondaryGallery,
+            }),
         parsedPrice: finalPrice,
         parsedRegularPrice: finalRegularPrice,
-        variationCards: parsedVariationCards,
+        variationCards: archiveMode ? [] : parsedVariationCards,
         isVariation: parsedVariationCards.length > 0,
         isAvailableInRegion,
       });
@@ -336,25 +343,32 @@ export const formatProducts = (
       finalPrice != null &&
       finalPrice > 0;
 
+    const {
+      shortDescription,
+      description,
+      secondaryGallery,
+      ...archiveSafeProduct
+    } = product;
+
     formattedProducts.push({
-      ...product,
-      shortDescription: sanitizeHtml(
-        product.shortDescription
-      ),
-      description: sanitizeHtml(
-        product.description
-      ),
-      secondaryGallery: product.secondaryGallery
-        ? product.secondaryGallery.map((item) => ({
-            ...item,
-            description:
-              sanitizeHtml(item.description) ??
-              item.description,
-          }))
-        : product.secondaryGallery,
+      ...archiveSafeProduct,
+      ...(archiveMode
+        ? {}
+        : {
+            shortDescription: sanitizeHtml(shortDescription),
+            description: sanitizeHtml(description),
+            secondaryGallery: secondaryGallery
+              ? secondaryGallery.map((item) => ({
+                  ...item,
+                  description:
+                    sanitizeHtml(item.description) ??
+                    item.description,
+                }))
+              : secondaryGallery,
+          }),
       parsedPrice: finalPrice,
       parsedRegularPrice: finalRegularPrice,
-      variationCards: rawVariations,
+      variationCards: archiveMode ? [] : rawVariations,
       isVariation: rawVariations.length > 0,
       isAvailableInRegion,
     });
