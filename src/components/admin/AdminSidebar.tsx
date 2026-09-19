@@ -2,99 +2,112 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, ClipboardList, FileText, LayoutDashboard, LifeBuoy, LogOut, Menu, Package, ShieldCheck, ShoppingCart, UserRound, Users, X } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, Activity, ClipboardList, FileText, LayoutDashboard, LifeBuoy, LogOut, Package, ShieldCheck, ShoppingCart, UserCog, UserRound, Users, X } from "lucide-react";
+import UserAvatar from "@/components/ui/UserAvatar";
+import AdminBadge from "@/components/ui/AdminBadge";
 import { ADMIN_PERMISSIONS, type AdminPermission } from "@/lib/admin/permissions";
 import { useLogout } from "@/lib/hooks/useLogout";
-import UserAvatar from "@/components/ui/UserAvatar";
-import AdminNotificationsBell from "./AdminNotificationsBell";
+import Skeleton from "@/components/ui/Skeleton";
 
 interface Props {
   user: { name: string; email: string; avatarUrl: string | null };
   permissions: string[];
+  isOpen: boolean;
+  isDesktop: boolean;
+  onClose: () => void;
 }
 
-const ITEMS: Array<{ href: string; label: string; icon: typeof LayoutDashboard; permission?: AdminPermission; anyPermissions?: AdminPermission[]; exact?: boolean }> = [
-  { href: "/admin", label: "داشبورد", icon: LayoutDashboard, exact: true },
+type AdminNavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  permission?: AdminPermission;
+  anyPermissions?: AdminPermission[];
+  exact?: boolean;
+};
+
+const NAV_ITEMS: AdminNavItem[] = [
+  { href: "/admin", label: "پیشخوان", icon: LayoutDashboard, exact: true },
   { href: "/admin/orders", label: "سفارش‌ها", icon: ShoppingCart, permission: ADMIN_PERMISSIONS.ORDERS_READ },
   { href: "/admin/tickets", label: "تیکت‌ها", icon: LifeBuoy, permission: ADMIN_PERMISSIONS.TICKETS_READ },
   { href: "/admin/gold", label: "تابلوی طلا", icon: Activity, permission: ADMIN_PERMISSIONS.GOLD_READ },
   { href: "/admin/reviews", label: "دیدگاه‌ها", icon: ClipboardList, permission: ADMIN_PERMISSIONS.REVIEWS_MODERATE },
   { href: "/admin/customers", label: "مشتریان", icon: Users, permission: ADMIN_PERMISSIONS.USERS_READ },
-  { href: "/admin/engine", label: "موتور فروش", icon: Package, anyPermissions: [ADMIN_PERMISSIONS.PRICING_READ, ADMIN_PERMISSIONS.ENGINE_SCHEDULER, ADMIN_PERMISSIONS.ENGINE_RATES, ADMIN_PERMISSIONS.ENGINE_REVALIDATION] },
+  {
+    href: "/admin/engine",
+    label: "موتور فروش",
+    icon: Package,
+    anyPermissions: [ADMIN_PERMISSIONS.PRICING_READ, ADMIN_PERMISSIONS.ENGINE_SCHEDULER, ADMIN_PERMISSIONS.ENGINE_RATES, ADMIN_PERMISSIONS.ENGINE_REVALIDATION],
+  },
+  { href: "/admin/cdkeys", label: "CD Keyها", icon: ShieldCheck, permission: ADMIN_PERMISSIONS.CDKEYS_READ },
   { href: "/admin/audit", label: "گزارش رویدادها", icon: FileText, permission: ADMIN_PERMISSIONS.AUDIT_READ },
-  { href: "/admin/settings", label: "تنظیمات", icon: ShieldCheck, permission: ADMIN_PERMISSIONS.SETTINGS_MANAGE },
+  { href: "/admin/settings", label: "تنظیمات حساب", icon: UserCog, permission: ADMIN_PERMISSIONS.SETTINGS_MANAGE },
   { href: "/admin/admins", label: "مدیران و نقش‌ها", icon: UserRound, permission: ADMIN_PERMISSIONS.USERS_WRITE },
 ];
 
-export default function AdminSidebar({ user, permissions }: Props) {
+export default function AdminSidebar({ user, permissions, isOpen, isDesktop, onClose }: Props) {
   const pathname = usePathname();
   const { logout, isLoggingOut } = useLogout();
-  const [open, setOpen] = useState(false);
-  const visible = ITEMS.filter((item) => (!item.permission && !item.anyPermissions) || (item.permission ? permissions.includes(item.permission) : item.anyPermissions?.some((permission) => permissions.includes(permission))));
 
-  const nav = (
-    <div className="flex h-full w-[264px] flex-col border-l border-brand-surface_hover bg-brand-surface">
-      <div className="border-b border-brand-surface_hover p-4">
-        <div className="flex items-center gap-3">
-          <UserAvatar src={user.avatarUrl} name={user.name} size="md" ring />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-black text-white">{user.name}</div>
-            <div className="mt-0.5 truncate text-[10px] text-brand-m_khonsa" dir="ltr">{user.email}</div>
-          </div>
-          <button type="button" onClick={() => setOpen(false)} className="text-brand-m_khonsa hover:text-white lg:hidden" aria-label="بستن منو"><X size={18} /></button>
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.permission) return permissions.includes(item.permission);
+    if (item.anyPermissions?.length) return item.anyPermissions.some((permission) => permissions.includes(permission));
+    return true;
+  });
+
+  const containerClasses = isDesktop
+    ? `shrink-0 h-screen bg-brand-surface rounded-none border-l border-brand-surface_hover overflow-hidden transition-[width] duration-300 ease-in-out ${isOpen ? "w-[260px]" : "w-0"}`
+    : `fixed top-0 right-0 h-full w-[280px] max-w-[85vw] bg-brand-surface border-l border-brand-surface_hover z-[9999] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? "translate-x-0" : "translate-x-full"}`;
+
+  return (
+    <aside className={containerClasses} role={!isDesktop ? "dialog" : undefined} aria-modal={!isDesktop ? isOpen : undefined}>
+      <div className="flex flex-col h-full w-[260px]">
+        <div className="relative flex flex-col items-center rounded-none gap-3 p-6 border-b border-brand-surface_hover shrink-0">
+          {!isDesktop && (
+            <button type="button" onClick={onClose} className="absolute top-3 left-3 text-brand-m_khonsa hover:text-white transition-colors p-1.5" aria-label="بستن منو">
+              <X size={18} />
+            </button>
+          )}
+          <UserAvatar src={user.avatarUrl} name={user.name} size="lg" ring />
+          <AdminBadge />
+          <span className="text-sm font-bold text-white truncate max-w-full">{user.name}</span>
+          <span className="text-[10px] text-brand-m_khonsa truncate max-w-full" dir="ltr">{user.email}</span>
+          <Link href="/" prefetch={false} className="text-xs text-brand-m_khonsa hover:text-white flex items-center gap-1.5 transition-colors">
+            <ArrowRight size={14} />
+            بازگشت به فروشگاه
+          </Link>
         </div>
-      </div>
 
-      <div className="flex items-center justify-between border-b border-brand-surface_hover px-4 py-3">
-        <div>
-          <div className="text-[9px] font-black tracking-[0.16em] text-brand-blue">BATTLEEE</div>
-          <div className="mt-0.5 text-[10px] text-brand-m_khonsa">پنل مدیریت فروشگاه</div>
-        </div>
-        <AdminNotificationsBell />
-      </div>
+        <div className="px-5 pt-4 pb-2 text-[9px] font-black tracking-[0.12em] text-brand-m_khonsa/60">پنل مدیریت</div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
-        <div className="mb-2 px-2 text-[9px] font-black text-brand-m_khonsa/60">منوی مدیریت</div>
-        <div className="space-y-0.5">
-          {visible.map(({ href, label, icon: Icon, exact }) => {
-            const active = exact ? pathname === href : pathname.startsWith(href);
+        <nav className="flex flex-col rounded-none flex-1 overflow-y-auto">
+          {visibleItems.map(({ href, label, icon: Icon, exact }) => {
+            const active = exact ? pathname === href : pathname?.startsWith(href);
             return (
               <Link
-                prefetch={false}
                 key={href}
+                prefetch={false}
                 href={href}
-                onClick={() => setOpen(false)}
-                className={`group flex min-h-10 items-center gap-3 rounded-[5px] border-r-2 px-3 text-xs font-black transition-colors ${active ? "border-brand-blue bg-brand-blue/10 text-white" : "border-transparent text-brand-m_khonsa hover:bg-white/[.035] hover:text-white"}`}
+                onClick={!isDesktop ? onClose : undefined}
+                className={`flex items-center gap-3 px-5 py-3.5 text-sm font-semibold whitespace-nowrap border-r-[3px] rounded-none transition-colors ${active ? "border-brand-blue text-white bg-brand-blue/5" : "border-transparent text-brand-m_khonsa hover:text-white hover:bg-white/5"}`}
               >
-                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[5px] ${active ? "bg-brand-blue/15 text-brand-blue" : "bg-white/[.025] text-brand-m_khonsa group-hover:text-white"}`}><Icon size={15} strokeWidth={2.2} /></span>
-                <span>{label}</span>
+                <Icon size={18} strokeWidth={2.25} />
+                {label}
               </Link>
             );
           })}
-        </div>
-      </nav>
 
-      <div className="border-t border-brand-surface_hover p-2">
-        <Link href="/my-account" className="flex min-h-10 items-center gap-3 rounded-[5px] px-3 text-xs font-black text-brand-m_khonsa transition hover:bg-white/[.035] hover:text-white">
-          <UserRound size={15} /> حساب کاربری
-        </Link>
-        <button onClick={logout} disabled={isLoggingOut} className="flex min-h-10 w-full items-center gap-3 rounded-[5px] px-3 text-xs font-black text-red-300 transition hover:bg-red-500/10 disabled:opacity-50">
-          <LogOut size={15} /> {isLoggingOut ? "در حال خروج..." : "خروج از پنل"}
-        </button>
+          <Link href="/my-account" prefetch={false} onClick={!isDesktop ? onClose : undefined} className="flex items-center gap-3 px-5 rounded-none py-3.5 text-sm font-semibold whitespace-nowrap text-brand-m_khonsa hover:text-white hover:bg-white/5 transition-colors mt-auto shrink-0 border-t border-brand-surface_hover">
+            <UserRound size={18} strokeWidth={2.25} />
+            حساب کاربری
+          </Link>
+
+          <button onClick={logout} disabled={isLoggingOut} className="flex items-center gap-3 px-5 rounded-none py-3.5 text-sm font-semibold whitespace-nowrap text-red-500 hover:bg-red-500/10 transition-colors shrink-0 disabled:opacity-50">
+            <LogOut size={18} strokeWidth={2.25} />
+            {isLoggingOut ? "در حال خروج..." : "خروج از پنل"}
+          </button>
+        </nav>
       </div>
-    </div>
-  );
-
-  return (
-    <>
-      <button type="button" onClick={() => setOpen(true)} className="fixed right-3 top-3 z-40 inline-flex h-9 w-9 items-center justify-center rounded-[5px] border border-brand-surface_hover bg-brand-surface text-white shadow-lg lg:hidden" aria-label="باز کردن منوی مدیریت"><Menu size={18} /></button>
-      <aside className="fixed inset-y-0 right-0 z-30 hidden lg:flex">{nav}</aside>
-      {open && (
-        <div className="fixed inset-0 z-50 bg-black/60 lg:hidden" onClick={() => setOpen(false)}>
-          <div className="h-full" onClick={(event) => event.stopPropagation()}>{nav}</div>
-        </div>
-      )}
-    </>
+    </aside>
   );
 }

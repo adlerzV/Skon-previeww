@@ -2,18 +2,16 @@
 
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
-import { Bell } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Menu } from "lucide-react";
 import AdminSidebar from "./AdminSidebar";
 import { AdminContextProvider, useAdminContext } from "./AdminContext";
 import type { AdminBootstrap } from "@/lib/admin/server";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 const AdminNotificationsBell = dynamic(() => import("./AdminNotificationsBell"), {
   ssr: false,
-  loading: () => (
-    <button type="button" className="relative inline-flex h-9 w-9 items-center justify-center rounded-[5px] border border-brand-surface_hover text-brand-m_khonsa" aria-label="اعلان‌ها" disabled>
-      <Bell size={17} />
-    </button>
-  ),
+  loading: () => <div className="h-9 w-9 rounded bg-white/[.025] animate-pulse" aria-hidden="true" />,
 });
 
 export default function AdminShell({ children, initialContext }: { children: ReactNode; initialContext?: AdminBootstrap }) {
@@ -26,6 +24,36 @@ export default function AdminShell({ children, initialContext }: { children: Rea
 
 function AdminShellInner({ children }: { children: ReactNode }) {
   const { user, permissions, loading } = useAdminContext();
+  const [isDesktop, setIsDesktop] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const applyMode = (matches: boolean) => {
+      setIsDesktop(matches);
+      setIsSidebarOpen(matches);
+    };
+    applyMode(mql.matches);
+    const handleChange = (event: MediaQueryListEvent) => applyMode(event.matches);
+    mql.addEventListener("change", handleChange);
+    return () => mql.removeEventListener("change", handleChange);
+  }, []);
+
+  const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
+  const toggleSidebar = useCallback(() => setIsSidebarOpen((current) => !current), []);
+
+  useEffect(() => {
+    if (!isDesktop) setIsSidebarOpen(false);
+  }, [isDesktop]);
+
+  useEffect(() => {
+    if (isDesktop) return;
+    document.body.style.overflow = isSidebarOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isSidebarOpen, isDesktop]);
+
   const currentUser = user ?? {
     name: loading ? "در حال بارگذاری" : "مدیر",
     email: "",
@@ -33,24 +61,36 @@ function AdminShellInner({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-brand-bg text-white" dir="rtl">
-      <AdminSidebar user={currentUser} permissions={permissions} />
-      <main className="min-h-[100dvh] lg:pr-[264px]">
-        <div className="mx-auto min-h-[100dvh] w-full max-w-[1700px]">
-          <header className="sticky top-0 z-30 flex min-h-[58px] items-center justify-between gap-4 border-b border-brand-surface_hover bg-brand-bg px-4 lg:px-6">
-            <div className="min-w-0">
-              <div className="text-[9px] font-black tracking-[0.15em] text-brand-blue">مدیریت فروشگاه</div>
-              <div className="mt-0.5 truncate text-sm font-black text-white">مرکز عملیات Battleee</div>
+    <div className="h-screen w-full bg-brand-bg flex overflow-hidden" dir="rtl">
+      {!isDesktop && isSidebarOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9998]" onClick={closeSidebar} aria-hidden="true" />
+      )}
+
+      <AdminSidebar user={currentUser} permissions={permissions} isOpen={isSidebarOpen} isDesktop={isDesktop} onClose={closeSidebar} />
+
+      <div className="flex-1 min-w-0 flex flex-col h-screen">
+        <div className="h-[58px] rounded-none shrink-0 border-b border-brand-surface_hover flex items-center justify-between px-3 md:px-6 bg-brand-surface/50">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            <button type="button" onClick={toggleSidebar} className="text-brand-m_khonsa hover:text-white transition-colors p-2 shrink-0" aria-label="نمایش یا پنهان کردن منو" aria-expanded={isSidebarOpen}>
+              <Menu size={20} />
+            </button>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <UserAvatar src={currentUser.avatarUrl} name={currentUser.name} size="sm" />
+              <div className="min-w-0">
+                <span className="text-[9px] font-black tracking-[0.12em] text-brand-blue hidden sm:block">پنل مدیریت</span>
+                <span className="text-sm font-bold text-white truncate block">خوش اومدی {currentUser.name.split(" ")[0] || "مدیر"} 👋</span>
+              </div>
             </div>
-            <div className="shrink-0">
-              <AdminNotificationsBell />
-            </div>
-          </header>
-          <div className="min-h-[calc(100dvh-58px)] px-3 pb-8 pt-4 sm:px-4 lg:px-6 lg:pt-5">
-            {children}
+          </div>
+          <div className="shrink-0">
+            <AdminNotificationsBell />
           </div>
         </div>
-      </main>
+
+        <main className="flex-1 min-h-0 w-full p-4 md:p-6 pb-[calc(58px+env(safe-area-inset-bottom))] lg:pb-6 overflow-y-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
