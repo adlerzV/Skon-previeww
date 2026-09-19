@@ -279,8 +279,7 @@
 }
 
 @layer utilities {
-  .admin-ui section.bg-brand-surface,
-  .admin-ui div.bg-brand-surface { border-radius:12px; }
+  .admin-ui .bg-brand-surface { border-radius:12px; }
   .admin-ui input:not([type="checkbox"]):not([type="radio"]),
   .admin-ui select,
   .admin-ui textarea { border-radius:9px; }

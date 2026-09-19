@@ -33,7 +33,7 @@ function AdminShellInner({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-brand-bg">
-      <AdminSidebar user={currentUser} permissions={permissions} contextLoading={loading} />
+      <AdminSidebar user={currentUser} permissions={permissions} />
 
       <main className="lg:pr-[264px] min-h-[100dvh]">
         <div className="w-full max-w-[1800px] mx-auto min-h-[100dvh]">
