@@ -6,8 +6,8 @@ const WP_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL;
 const INTERNAL_WP_GRAPHQL_URL = process.env.INTERNAL_WORDPRESS_API_URL;
 const FALLBACK_LOCAL_URL = "http://tazavesh.local/graphql";
 const REQUEST_TIMEOUT_MS = Number(process.env.GRAPHQL_REQUEST_TIMEOUT_MS) || 12_000;
-const MAX_ATTEMPTS = 2;
-const RETRY_DELAY_MS = 400;
+const MAX_ATTEMPTS = Math.max(1, Number(process.env.GRAPHQL_MAX_ATTEMPTS) || 1);
+const RETRY_DELAY_MS = Math.max(100, Number(process.env.GRAPHQL_RETRY_DELAY_MS) || 350);
 
 if (!WP_GRAPHQL_URL && process.env.NODE_ENV === "production") {
   console.error(
@@ -122,7 +122,7 @@ export async function fetchGraphQL(
       });
 
       if (!res.ok) {
-        if (res.status >= 500 && attempt < maxAttempts) {
+        if (res.status >= 502 && attempt < maxAttempts) {
           await delay(RETRY_DELAY_MS);
           continue;
         }

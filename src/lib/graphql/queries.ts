@@ -55,6 +55,107 @@ function buildSlugTag(prefix: string, slug: string): string {
   return asciiPart ? `${prefix}-${asciiPart}-${hash}` : `${prefix}-${hash}`;
 }
 
+
+async function loadHeaderPublicNavigationData() {
+  const data = await fetchGraphQL(
+    `
+      ${CATEGORY_BASIC_FIELDS}
+      query GetHeaderPublicNavigationData {
+        productCategories(where: { hideEmpty: true, parent: 0 }, first: 15) {
+          nodes { ...CategoryBasicFields }
+        }
+        categories(where: { hideEmpty: true, parent: 0 }, first: 15) {
+          nodes {
+            name
+            slug
+            categoryImage { sourceUrl(size: "thumbnail") }
+          }
+        }
+      }
+    `,
+    {},
+    ["header-data"]
+  );
+
+  const shopNodes: HeaderCategoryNode[] = data?.productCategories?.nodes ?? [];
+  const blogNodes: HeaderCategoryNode[] = data?.categories?.nodes ?? [];
+
+  return {
+    shopItems: shopNodes
+      .filter((cat) => !["home", "uncategorized"].includes(cat.slug) && cat.image?.sourceUrl)
+      .map((cat) => ({
+        title: cat.name,
+        img: cat.image!.sourceUrl,
+        link: `/${cat.slug}`,
+      })),
+    blogItems: blogNodes
+      .filter((cat) => cat.categoryImage?.sourceUrl)
+      .map((cat) => ({
+        title: cat.name,
+        img: cat.categoryImage!.sourceUrl,
+        link: `/blog/${cat.slug}`,
+      })),
+  };
+}
+
+export async function getHeaderPublicNavigationData() {
+  const cached = unstable_cache(
+    loadHeaderPublicNavigationData,
+    ["header-public-navigation-data"],
+    { tags: ["header-data"], revalidate: false }
+  );
+
+  return cached();
+}
+
+async function loadHeaderRegionsData() {
+  const data = await fetchGraphQL(
+    `
+      query GetHeaderRegionsData {
+        allPaRegionShop(first: 10) {
+          nodes { name title slug flagUrl }
+        }
+      }
+    `,
+    {},
+    ["regions"]
+  );
+
+  const regions = Array.isArray(data?.allPaRegionShop?.nodes)
+    ? data.allPaRegionShop.nodes.map((r: Record<string, string>) => ({
+        name: r.name || r.title,
+        slug: r.slug,
+        flagUrl: r.flagUrl || undefined,
+      }))
+    : [];
+
+  return { regions };
+}
+
+export async function getHeaderRegionsData() {
+  const cached = unstable_cache(
+    loadHeaderRegionsData,
+    ["header-regions-data"],
+    { tags: ["regions"], revalidate: false }
+  );
+
+  return cached();
+}
+
+/**
+ * Backwards-compatible combined accessor for callers outside the Header.
+ * The Header itself deliberately uses the split accessors so public navigation
+ * and region data can stream independently.
+ */
+export async function getHeaderNavigationData() {
+  const [navigation, regionData] = await Promise.all([
+    getHeaderPublicNavigationData(),
+    getHeaderRegionsData(),
+  ]);
+
+  return { ...navigation, ...regionData };
+}
+
 export async function getHeaderCategories() {
   const cached = unstable_cache(
     async () => {

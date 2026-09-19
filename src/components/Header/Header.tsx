@@ -11,7 +11,6 @@ import GamesNavSkeleton from "./GamesNavSkeleton";
 import MobileMenuAsync from "./MobileMenuAsync";
 import MobileBottomNavAsync from "./MobileBottomNavAsync";
 import { HeaderViewerProvider } from "./HeaderViewerProvider";
-import Skeleton from "@/components/ui/Skeleton";
 import { Download, HelpCircle, AlertCircle } from "lucide-react";
 
 const ACTION_BUTTON_CLASSES =
@@ -75,7 +74,7 @@ export default function Header({ activeRegion }: { activeRegion: string }) {
             <HeaderSearch />
 
             <div className="flex items-center justify-center h-full">
-              <Suspense fallback={<Skeleton className="w-[140px] h-[60px] rounded-[4px]" />}>
+              <Suspense fallback={<RegionSwitcherImmediateFallback region={activeRegion} />}>
                 <RegionSwitcherAsync initialRegion={activeRegion} />
               </Suspense>
             </div>
@@ -92,6 +91,25 @@ export default function Header({ activeRegion }: { activeRegion: string }) {
 
       <MobileBottomNavAsync />
     </HeaderViewerProvider>
+  );
+}
+
+function RegionSwitcherImmediateFallback({ region }: { region: string }) {
+  const labels: Record<string, string> = {
+    eu: "اروپا (EU)",
+    us: "آمریکا (US)",
+    tr: "ترکیه (TR)",
+    ua: "اوکراین (UA)",
+  };
+
+  return (
+    <div
+      className="flex items-center justify-between gap-2 px-3 h-[60px] w-[140px] bg-brand-surface text-white text-[13px] font-semibold rounded-[5px]"
+      aria-label="منطقه فعال"
+    >
+      <span className="truncate">{labels[region.toLowerCase()] ?? region.toUpperCase()}</span>
+      <span className="text-brand-m_khonsa shrink-0" aria-hidden="true">⌄</span>
+    </div>
   );
 }
 

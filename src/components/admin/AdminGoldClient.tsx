@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, CheckCircle2, Clock3, Coins, PauseCircle, Plus, ShieldAlert } from "lucide-react";
 import { useAdminContext } from "./AdminContext";
 import { AdminBadge, AdminCard, AdminEmpty, AdminPage, AdminPageIntro, AdminRefreshButton, AdminStatCard } from "./AdminUi";
@@ -31,13 +31,66 @@ export default function AdminGoldClient() {
   const [timer,setTimer]=useState("30");
   const [activeDealId,setActiveDealId]=useState<number|null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    try { const res=await fetch('/api/admin/gold',{cache:'no-store'}); const json=await res.json(); if(!res.ok) throw new Error(json?.error||'خطا در دریافت برد Gold'); setBoard(json); const deal=json?.adminGoldDeals?.find((item:Deal)=>['timer','active','suspended'].includes(item.status)); if(deal) setActiveDealId(deal.databaseId); }
-    catch(e){setMessage(e instanceof Error?e.message:'خطا در دریافت برد Gold');}
-    finally{setLoading(false);}
-  };
-  useEffect(()=>{void load(); const id=window.setInterval(()=>{void load();},5000); return()=>window.clearInterval(id);},[]);
+  const pollInFlightRef = useRef(false);
+  const pollTimerRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
+  const boardRef = useRef(board);
+
+  useEffect(() => {
+    boardRef.current = board;
+  }, [board]);
+
+  const load = useCallback(async (silent = false) => {
+    if (pollInFlightRef.current) return;
+    pollInFlightRef.current = true;
+    if (!silent) setLoading(true);
+    try {
+      const res=await fetch('/api/admin/gold',{cache:'no-store'});
+      const json=await res.json();
+      if(!res.ok) throw new Error(json?.error||'خطا در دریافت برد Gold');
+      if (!mountedRef.current) return;
+      setBoard(json);
+      const deal=json?.adminGoldDeals?.find((item:Deal)=>['timer','active','suspended'].includes(item.status));
+      setActiveDealId(deal?.databaseId ?? null);
+    }
+    catch(e){ if (!silent && mountedRef.current) setMessage(e instanceof Error?e.message:'خطا در دریافت برد Gold'); }
+    finally{
+      pollInFlightRef.current = false;
+      if (!silent && mountedRef.current) setLoading(false);
+    }
+  }, []);
+
+  const schedulePoll = useCallback(() => {
+    if (!mountedRef.current) return;
+    if (pollTimerRef.current !== null) window.clearTimeout(pollTimerRef.current);
+
+    const hidden = document.visibilityState !== 'visible';
+    const currentBoard = boardRef.current;
+    const hasLiveActivity = currentBoard.adminGoldDeals.some((deal) => ['timer','active','suspended'].includes(deal.status))
+      || currentBoard.adminGoldProposals.some((proposal) => ['pending','claimed','timer'].includes(proposal.status));
+    const delay = hidden ? 30_000 : hasLiveActivity ? 5_000 : 15_000;
+
+    pollTimerRef.current = window.setTimeout(async () => {
+      if (document.visibilityState === 'visible') await load(true);
+      schedulePoll();
+    }, delay);
+  }, [load]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const bootstrap = async () => {
+      await load();
+      schedulePoll();
+    };
+    void bootstrap();
+    const onVisibility = () => schedulePoll();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      mountedRef.current = false;
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (pollTimerRef.current !== null) window.clearTimeout(pollTimerRef.current);
+    };
+  }, [load, schedulePoll]);
 
   const proposals = useMemo(()=>board.adminGoldProposals.filter(p=>p.status==='pending'||p.status==='claimed'||p.status==='timer'),[board.adminGoldProposals]);
   const pending = board.adminGoldProposals.filter(p=>p.status==='pending').length;
@@ -64,7 +117,7 @@ export default function AdminGoldClient() {
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,.8fr)]">
       <div className="space-y-4">
         <AdminCard className="overflow-hidden">
-          <div className="flex items-center justify-between border-b border-white/[.06] p-4"><div className="flex items-center gap-2"><Activity size={16} className="text-brand-blue"/><div><div className="text-sm font-black text-white">تابلوی زنده طلا</div><div className="mt-1 text-[9px] text-brand-m_khonsa">به‌روزرسانی خودکار هر ۵ ثانیه</div></div></div><AdminBadge tone="info">زنده</AdminBadge></div>
+          <div className="flex items-center justify-between border-b border-white/[.06] p-4"><div className="flex items-center gap-2"><Activity size={16} className="text-brand-blue"/><div><div className="text-sm font-black text-white">تابلوی زنده طلا</div><div className="mt-1 text-[9px] text-brand-m_khonsa">به‌روزرسانی هوشمند؛ هنگام فعالیت هر ۵ ثانیه</div></div></div><AdminBadge tone="info">زنده</AdminBadge></div>
           <div className="hidden lg:block overflow-x-auto"><table className="w-full border-collapse text-right [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-white/[.06] [&_th]:px-3.5 [&_th]:py-3 [&_th]:text-[9px] [&_th]:font-black [&_th]:text-brand-m_khonsa [&_td]:border-b [&_td]:border-white/[.06] [&_td]:px-3.5 [&_td]:py-3 [&_td]:align-middle [&_tr:last-child_td]:border-b-0 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-white/[.02] min-w-[930px]"><thead><tr><th>درخواست</th><th>مقدار</th><th>پیشنهاد</th><th>وضعیت</th><th>اقدام</th></tr></thead><tbody>{board.adminGoldBuyOrders.map(order=><tr key={order.databaseId}><td><div className="text-xs font-black text-white">{order.gameName} · {order.region}</div><div className="mt-1 text-[9px] text-brand-m_khonsa">خرید #{order.databaseId}</div></td><td className="text-[11px] font-black text-white">{fmtGold(order.amount)} Gold</td><td><div className="text-[11px] font-black text-white">{fmtMoney(order.offerAmount)}</div><div className="mt-1 text-[9px] text-brand-m_khonsa">{order.ratePer1k} / 1K</div></td><td><AdminBadge tone={tone(order.status)}>{statusLabel[order.status]||order.status}</AdminBadge><div className="mt-1 text-[9px] text-brand-m_khonsa">{order.pendingProposalCount.toLocaleString('fa-IR')} پیشنهاد منتظر</div></td><td><button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[5px] px-3 text-xs font-black transition disabled:pointer-events-none disabled:opacity-50 border border-brand-surface_hover bg-brand-surface_hover/60 text-white hover:bg-brand-surface_hover" onClick={()=>document.getElementById('gold-proposals')?.scrollIntoView({behavior:'smooth'})}>دیدن پیشنهادها</button></td></tr>)}</tbody></table></div>
           <div className="lg:hidden space-y-2 p-3">{board.adminGoldBuyOrders.map(order=><div key={order.databaseId} className="rounded-[5px] border border-white/[.06] bg-black/10 p-3"><div className="flex items-start justify-between gap-3"><div><div className="text-xs font-black text-white">{order.gameName}</div><div className="mt-1 text-[9px] text-brand-m_khonsa">{order.region} · #{order.databaseId}</div></div><AdminBadge tone={tone(order.status)}>{statusLabel[order.status]||order.status}</AdminBadge></div><div className="mt-3 grid grid-cols-2 gap-3"><div><div className="text-[9px] text-brand-m_khonsa">مقدار</div><div className="mt-1 text-[10px] font-black text-white">{fmtGold(order.amount)}</div></div><div><div className="text-[9px] text-brand-m_khonsa">پیشنهاد معلق</div><div className="mt-1 text-[10px] font-black text-white">{order.pendingProposalCount.toLocaleString('fa-IR')}</div></div></div></div>)}{board.adminGoldBuyOrders.length===0&&<AdminEmpty title="درخواست خریدی وجود ندارد."/>}</div>
         </AdminCard>

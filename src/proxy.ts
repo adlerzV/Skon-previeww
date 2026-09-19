@@ -14,18 +14,20 @@ const FALLBACK_PROD_URL = "https://api.arena2battle.com/graphql";
 const REFRESH_TIMEOUT_MS = 6_000;
 const REFRESH_SUCCESS_COOLDOWN_SECONDS = 90;
 
+const PUBLIC_GRAPHQL_HOST = (() => {
+  try {
+    return new URL(WP_GRAPHQL_URL || FALLBACK_PROD_URL).host;
+  } catch {
+    return undefined;
+  }
+})();
+
 const refreshInFlight = new Map<string, Promise<string | null>>();
 
 function resolveEndpoint(): { url: string; hostHeader?: string } {
   const publicUrl = WP_GRAPHQL_URL || FALLBACK_PROD_URL;
   if (!INTERNAL_WP_GRAPHQL_URL) return { url: publicUrl };
-  let hostHeader: string | undefined;
-  try {
-    hostHeader = new URL(publicUrl).host;
-  } catch {
-    hostHeader = undefined;
-  }
-  return { url: INTERNAL_WP_GRAPHQL_URL, hostHeader };
+  return { url: INTERNAL_WP_GRAPHQL_URL, hostHeader: PUBLIC_GRAPHQL_HOST };
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
@@ -200,7 +202,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const refreshed = await applyAuthRefresh(request);
+  const refreshed = hasAuthToken ? await applyAuthRefresh(request) : { token: null, cooldownSeconds: 0 };
 
   const isNonRegionRoute =
     pathname.startsWith("/my-account") ||

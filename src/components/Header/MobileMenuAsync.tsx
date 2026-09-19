@@ -1,14 +1,18 @@
-import { getHeaderBlogCategories, getHeaderCategories, getRegions } from "@/lib/graphql";
+import { getHeaderPublicNavigationData, getHeaderRegionsData } from "@/lib/graphql";
 import MobileMenu from "./MobileMenu";
 
 export default function MobileMenuAsync({ activeRegion }: { activeRegion: string }) {
-  // Start these cached server requests immediately, but do not await them here.
-  // MobileMenu consumes them with React use() only when the relevant UI opens.
-  const regionsPromise = getRegions().catch(() => []);
-  const drawerDataPromise = Promise.all([
-    getHeaderCategories().catch(() => []),
-    getHeaderBlogCategories().catch(() => []),
-  ]).then(([shopItems, blogItems]) => ({
+  // Start public navigation and region data independently. The mobile drawer
+  // only consumes them when the user opens it, so neither one blocks the
+  // initial mobile header shell.
+  const navigationPromise = getHeaderPublicNavigationData().catch(() => ({
+    shopItems: [],
+    blogItems: [],
+  }));
+  const regionsPromise = getHeaderRegionsData()
+    .then(({ regions }) => regions)
+    .catch(() => []);
+  const drawerDataPromise = navigationPromise.then(({ shopItems, blogItems }) => ({
     shopItems,
     blogItems,
     user: null,

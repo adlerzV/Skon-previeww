@@ -41,6 +41,10 @@ export default function CategoryHero({ banners }: Props) {
   }, [total]);
 
   useEffect(() => {
+    setMountedCount((current) => Math.min(total, Math.max(current, activeIndex + 2)));
+  }, [activeIndex, total]);
+
+  useEffect(() => {
     if (total <= 1 || !isPlaying) return;
     const interval = setInterval(handleNext, AUTOPLAY_MS);
     return () => clearInterval(interval);
