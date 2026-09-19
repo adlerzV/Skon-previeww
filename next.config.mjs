@@ -47,6 +47,8 @@ const nextConfig = {
 
     minimumCacheTTL: 60 * 60 * 24 * 30,
 
+    dangerouslyAllowLocalIP: true,
+
     remotePatterns: [
       {
         protocol: 'https',
@@ -65,7 +67,6 @@ const nextConfig = {
       },
     ],
   },
-
   compress: true,
 
   async headers() {
