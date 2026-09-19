@@ -9,17 +9,17 @@ import OrdersPaginated from "@/components/account/OrdersPaginated";
 const ALL_STATUSES = ["PENDING", "PROCESSING", "ON_HOLD", "COMPLETED", "CANCELLED", "REFUNDED", "FAILED"];
 
 export default async function OrdersView() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/my-account");
-
   const token = await getAuthToken();
-  const data = await fetchGraphQL(
+  const dataPromise = fetchGraphQL(
     CUSTOMER_ORDERS_QUERY,
     { statuses: ALL_STATUSES },
     [],
     "no-store",
     token || undefined
   );
+  const userPromise = getCurrentUser();
+  const [user, data] = await Promise.all([userPromise, dataPromise]);
+  if (!user) redirect("/my-account");
 
   const orders = data?.customer?.orders?.nodes ?? [];
   const pageInfo = data?.customer?.orders?.pageInfo ?? { hasNextPage: false, endCursor: null };

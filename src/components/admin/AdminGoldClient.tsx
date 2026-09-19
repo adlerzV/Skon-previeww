@@ -17,10 +17,10 @@ function tone(status:string): "neutral"|"info"|"success"|"warning"|"danger" { if
 function fmtGold(value:number){ return value.toLocaleString('fa-IR'); }
 function fmtMoney(value:string){ return Number(value||0).toLocaleString('fa-IR'); }
 
-export default function AdminGoldClient() {
+export default function AdminGoldClient({ initial }: { initial?: Board }) {
   const { permissions } = useAdminContext();
-  const [board,setBoard]=useState<Board>(EMPTY);
-  const [loading,setLoading]=useState(true);
+  const [board,setBoard]=useState<Board>(initial ?? EMPTY);
+  const [loading,setLoading]=useState(!initial);
   const [message,setMessage]=useState("");
   const [gameName,setGameName]=useState("World of Warcraft");
   const [gameSlug,setGameSlug]=useState("wow");
@@ -79,7 +79,7 @@ export default function AdminGoldClient() {
   useEffect(() => {
     mountedRef.current = true;
     const bootstrap = async () => {
-      await load();
+      if (!initial) await load();
       schedulePoll();
     };
     void bootstrap();
@@ -90,7 +90,7 @@ export default function AdminGoldClient() {
       document.removeEventListener('visibilitychange', onVisibility);
       if (pollTimerRef.current !== null) window.clearTimeout(pollTimerRef.current);
     };
-  }, [load, schedulePoll]);
+  }, [initial, load, schedulePoll]);
 
   const proposals = useMemo(()=>board.adminGoldProposals.filter(p=>p.status==='pending'||p.status==='claimed'||p.status==='timer'),[board.adminGoldProposals]);
   const pending = board.adminGoldProposals.filter(p=>p.status==='pending').length;

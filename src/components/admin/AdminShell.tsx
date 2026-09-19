@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Bell } from "lucide-react";
 import AdminSidebar from "./AdminSidebar";
 import { AdminContextProvider, useAdminContext } from "./AdminContext";
+import type { AdminBootstrap } from "@/lib/admin/server";
 
 const AdminNotificationsBell = dynamic(() => import("./AdminNotificationsBell"), {
   ssr: false,
@@ -15,9 +16,9 @@ const AdminNotificationsBell = dynamic(() => import("./AdminNotificationsBell"),
   ),
 });
 
-export default function AdminShell({ children }: { children: ReactNode }) {
+export default function AdminShell({ children, initialContext }: { children: ReactNode; initialContext?: AdminBootstrap }) {
   return (
-    <AdminContextProvider>
+    <AdminContextProvider initialContext={initialContext}>
       <AdminShellInner>{children}</AdminShellInner>
     </AdminContextProvider>
   );

@@ -24,9 +24,9 @@ function badgeTone(status: string): "neutral" | "info" | "success" | "warning" |
 }
 function fmt(value?: string | null) { return value ? new Date(value.replace(" ", "T") + (value.includes("Z") ? "" : "Z")).toLocaleString("fa-IR") : "—"; }
 
-export default function AdminEngineClient() {
+export default function AdminEngineClient({ initial }: { initial?: { health: Health | null; failedJobs: FailedJob[] } }) {
   const { permissions } = useAdminContext();
-  const [health, setHealth] = useState<Health | null>(null), [failedJobs, setFailedJobs] = useState<FailedJob[]>([]), [loading, setLoading] = useState(true), [busy, setBusy] = useState(""), [message, setMessage] = useState(""), [error, setError] = useState("");
+  const [health, setHealth] = useState<Health | null>(initial?.health ?? null), [failedJobs, setFailedJobs] = useState<FailedJob[]>(initial?.failedJobs ?? []), [loading, setLoading] = useState(!initial), [busy, setBusy] = useState(""), [message, setMessage] = useState(""), [error, setError] = useState("");
   const canRates = permissions.includes("engine.rates"), canScheduler = permissions.includes("engine.scheduler"), canRevalidate = permissions.includes("engine.revalidation");
 
   const refresh = useCallback(async () => {
@@ -35,7 +35,7 @@ export default function AdminEngineClient() {
     catch (e) { setError(e instanceof Error ? e.message : "خطا در دریافت اطلاعات موتور"); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { if (!initial) void refresh(); }, [initial, refresh]);
 
   async function run(action: string, extra: Record<string, unknown> = {}) {
     setBusy(action); setMessage(""); setError("");

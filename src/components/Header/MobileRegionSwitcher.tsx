@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import { KNOWN_REGIONS } from "@/lib/hooks/useActiveRegion";
+import { setClientCookie } from "@/lib/cookies";
 
 interface Region {
   name: string;
@@ -47,7 +48,7 @@ export default function MobileRegionSwitcher({ regions, initialRegion }: MobileR
     setIsOpen(false);
     if (slug === currentRegionSlug) return;
 
-    document.cookie = `store_region=${slug}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+    setClientCookie("store_region", slug);
 
     let newPathname: string;
     if (firstSegmentIsRegion) {

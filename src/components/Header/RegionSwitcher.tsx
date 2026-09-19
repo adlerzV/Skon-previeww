@@ -3,6 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { setClientCookie } from "@/lib/cookies";
 
 interface Region {
   name: string;
@@ -53,7 +54,7 @@ export default function RegionSwitcher({ regions, initialRegion }: RegionSwitche
   const handleRegionChange = (slug: string) => {
     if (slug === currentRegionSlug) return;
 
-    document.cookie = `store_region=${slug}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+    setClientCookie("store_region", slug);
     
     let newPathname = "";
     const updatedSegments = [...segments];

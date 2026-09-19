@@ -9,6 +9,7 @@ export const ADMIN_BOOTSTRAP_QUERY = `
       email
       avatarUrl
       isStaff
+      hasManualPassword
       adminPermissions
     }
     adminOpenTicketsCount

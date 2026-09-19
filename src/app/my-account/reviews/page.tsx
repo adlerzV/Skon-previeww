@@ -7,11 +7,11 @@ import { MY_REVIEWS_QUERY } from "@/lib/graphql/auth";
 import MyReviewsList from "@/components/account/MyReviewsList";
 
 export default async function MyReviewsPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/my-account");
-
   const token = await getAuthToken();
-  const data = await fetchGraphQL(MY_REVIEWS_QUERY, {}, [], "no-store", token || undefined);
+  const dataPromise = fetchGraphQL(MY_REVIEWS_QUERY, {}, [], "no-store", token || undefined);
+  const userPromise = getCurrentUser();
+  const [user, data] = await Promise.all([userPromise, dataPromise]);
+  if (!user) redirect("/my-account");
   const reviews = data?.myReviews?.nodes ?? [];
   const pageInfo = data?.myReviews?.pageInfo ?? { hasNextPage: false, endCursor: null };
 

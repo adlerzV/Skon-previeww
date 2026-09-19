@@ -8,12 +8,12 @@ import SetPasswordForm from "@/components/account/SetPasswordForm";
 import SessionsList from "@/components/account/SessionsList";
 
 export default async function SettingsPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/my-account");
-
   const token = await getAuthToken();
-  const currentSessionId = await getSessionId();
-  const data = await fetchGraphQL(GET_SESSIONS_QUERY, {}, [], "no-store", token || undefined);
+  const currentSessionIdPromise = getSessionId();
+  const dataPromise = fetchGraphQL(GET_SESSIONS_QUERY, {}, [], "no-store", token || undefined);
+  const userPromise = getCurrentUser();
+  const [user, currentSessionId, data] = await Promise.all([userPromise, currentSessionIdPromise, dataPromise]);
+  if (!user) redirect("/my-account");
   const sessions = data?.viewer?.sessions ?? [];
 
   return (

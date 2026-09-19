@@ -45,14 +45,14 @@ function stripHtml(html: string) {
 
 export default async function TicketDetailPage({ params }: { params: Promise<{ ticketId: string }> }) {
   const { ticketId } = await params;
-  const user = await getCurrentUser();
-  if (!user) redirect("/my-account");
-
   const idNum = Number(ticketId);
   if (!Number.isInteger(idNum) || idNum <= 0) notFound();
 
   const token = await getAuthToken();
-  const data = await fetchGraphQL(TICKET_QUERY, { id: idNum }, [], "no-store", token || undefined);
+  const dataPromise = fetchGraphQL(TICKET_QUERY, { id: idNum }, [], "no-store", token || undefined);
+  const userPromise = getCurrentUser();
+  const [user, data] = await Promise.all([userPromise, dataPromise]);
+  if (!user) redirect("/my-account");
   const ticket = data?.myTicket;
 
   if (!ticket) notFound();

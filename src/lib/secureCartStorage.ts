@@ -10,8 +10,14 @@ interface StoredCredentialEnvelope {
 
 export interface StoredCredentials {
   email?: string;
-  password?: string;
   battleTag?: string;
+}
+
+function persistedCredentials(credentials: StoredCredentials): StoredCredentials {
+  return {
+    ...(credentials.email ? { email: credentials.email } : {}),
+    ...(credentials.battleTag ? { battleTag: credentials.battleTag } : {}),
+  };
 }
 
 function isBrowser() {
@@ -21,7 +27,7 @@ function isBrowser() {
 export function saveCredentials(itemId: string, credentials: StoredCredentials): void {
   if (!isBrowser()) return;
   try {
-    window.sessionStorage.setItem(STORAGE_PREFIX + itemId, JSON.stringify({ version: 1, savedAt: Date.now(), credentials } satisfies StoredCredentialEnvelope));
+    window.sessionStorage.setItem(STORAGE_PREFIX + itemId, JSON.stringify({ version: 1, savedAt: Date.now(), credentials: persistedCredentials(credentials) } satisfies StoredCredentialEnvelope));
   } catch {
   }
 }

@@ -7,11 +7,11 @@ import { CUSTOMER_ORDERS_LIGHT_QUERY } from "@/lib/graphql/auth";
 import NewTicketForm from "@/components/account/NewTicketForm";
 
 export default async function NewTicketPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/my-account");
-
   const token = await getAuthToken();
-  const data = await fetchGraphQL(CUSTOMER_ORDERS_LIGHT_QUERY, {}, [], "no-store", token || undefined);
+  const dataPromise = fetchGraphQL(CUSTOMER_ORDERS_LIGHT_QUERY, {}, [], "no-store", token || undefined);
+  const userPromise = getCurrentUser();
+  const [user, data] = await Promise.all([userPromise, dataPromise]);
+  if (!user) redirect("/my-account");
   const orders = data?.customer?.orders?.nodes ?? [];
 
   return (

@@ -22,11 +22,11 @@ const TICKETS_QUERY = `
 `;
 
 export default async function TicketsPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/my-account");
-
   const token = await getAuthToken();
-  const data = await fetchGraphQL(TICKETS_QUERY, {}, [], "no-store", token || undefined);
+  const dataPromise = fetchGraphQL(TICKETS_QUERY, {}, [], "no-store", token || undefined);
+  const userPromise = getCurrentUser();
+  const [user, data] = await Promise.all([userPromise, dataPromise]);
+  if (!user) redirect("/my-account");
   const tickets = data?.myTickets?.nodes ?? [];
   const pageInfo = data?.myTickets?.pageInfo ?? { hasNextPage: false, endCursor: null };
 

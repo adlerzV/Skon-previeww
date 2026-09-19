@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Newspaper } from "lucide-react";
 
 interface NotificationItem { id: string; title: string; body: string; link?: string; isRead: boolean; type?: string; }
@@ -9,6 +9,8 @@ export default function BlogNotificationBell() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const unreadCount = items.filter((n) => !n.isRead).length;
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const POLL_INTERVAL_MS = 45_000;
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -19,7 +21,32 @@ export default function BlogNotificationBell() {
   }, []);
 
   useEffect(() => {
-    fetchNotifications();
+    void fetchNotifications();
+
+    const startPolling = () => {
+      if (intervalRef.current) return;
+      intervalRef.current = setInterval(() => { void fetchNotifications(); }, POLL_INTERVAL_MS);
+    };
+    const stopPolling = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        stopPolling();
+      } else {
+        void fetchNotifications();
+        startPolling();
+      }
+    };
+    startPolling();
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [fetchNotifications]);
 
   const handleOpen = async () => {

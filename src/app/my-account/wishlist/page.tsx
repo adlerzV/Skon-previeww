@@ -4,14 +4,13 @@ import { getWishlistProductIds, getProductsByIds } from "@/lib/graphql";
 import WishlistGrid from "@/components/account/WishlistGrid";
 
 export default async function WishlistPage() {
-  const user = await getCurrentUser();
-  if (!user) return null;
-
   const token = await getAuthToken();
   const cookieStore = await cookies();
   const activeRegion = cookieStore.get("store_region")?.value || "eu";
-
-  const ids = await getWishlistProductIds(token);
+  const userPromise = getCurrentUser();
+  const idsPromise = getWishlistProductIds(token);
+  const [user, ids] = await Promise.all([userPromise, idsPromise]);
+  if (!user) return null;
   const products = await getProductsByIds(ids, activeRegion);
 
   return (

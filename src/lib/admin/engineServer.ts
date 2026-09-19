@@ -1,5 +1,6 @@
 import "server-only";
 import { getAuthToken, getCurrentAdminUser } from "@/lib/auth/session";
+import type { AdminBootstrap } from "@/lib/admin/server";
 import { fetchGraphQL } from "@/lib/graphql";
 import {
   ADMIN_AUDIT_LOGS_QUERY,
@@ -40,6 +41,39 @@ async function engineFetch<T = any>(query: string, variables: Record<string, unk
     undefined,
     { "X-BTL-Admin-Request": "1" }
   ) as T;
+}
+
+function assertEngineBootstrapAccess(bootstrap: AdminBootstrap, mode: "read" | "audit"): void {
+  if (!bootstrap?.user?.id) throw new Error("دسترسی غیرمجاز");
+  if (mode === "audit" && !bootstrap.permissions.includes("audit.read")) throw new Error("دسترسی غیرمجاز");
+  if (
+    mode === "read" &&
+    !bootstrap.permissions.some((permission) =>
+      ["pricing.read", "engine.scheduler", "engine.rates", "engine.revalidation"].includes(permission)
+    )
+  ) throw new Error("دسترسی غیرمجاز");
+}
+
+export async function getAdminEngineWithContext(bootstrap: AdminBootstrap) {
+  assertEngineBootstrapAccess(bootstrap, "read");
+  const [healthData, failedData] = await Promise.all([
+    engineFetch(ADMIN_ENGINE_HEALTH_QUERY),
+    engineFetch(ADMIN_FAILED_JOBS_QUERY, { first: 50 }),
+  ]);
+  return {
+    health: healthData?.adminEngineHealth ?? null,
+    failedJobs: Array.isArray(failedData?.adminFailedJobs) ? failedData.adminFailedJobs : [],
+  };
+}
+
+export async function getAdminAuditLogsWithContext(bootstrap: AdminBootstrap, variables: Record<string, unknown> = {}) {
+  assertEngineBootstrapAccess(bootstrap, "audit");
+  const data = await engineFetch(ADMIN_AUDIT_LOGS_QUERY, {
+    first: Math.min(Math.max(Number(variables.first ?? 100), 1), 200),
+    action: variables.action ? String(variables.action) : undefined,
+    result: variables.result ? String(variables.result) : undefined,
+  });
+  return Array.isArray(data?.adminAuditLogs) ? data.adminAuditLogs : [];
 }
 
 export async function getAdminEngine() {

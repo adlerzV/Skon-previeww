@@ -34,6 +34,9 @@ const hasUpstash = Boolean(
 );
 const allowMemoryFallback =
   process.env.RATE_LIMIT_ALLOW_MEMORY_FALLBACK === "true" || !isProduction;
+const trustProxyHeaders = isProduction
+  ? process.env.RATE_LIMIT_TRUST_PROXY_HEADERS === "true"
+  : process.env.RATE_LIMIT_TRUST_PROXY_HEADERS !== "false";
 const DISTRIBUTED_REQUIRED_PREFIXES = [
   "auth-",
   "admin-",
@@ -89,11 +92,33 @@ function getLimiter(max: number, windowMs: number): Ratelimit {
 }
 
 export function getClientIp(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
+  if (trustProxyHeaders) {
+    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    if (forwarded) return forwarded;
+    const realIp = request.headers.get("x-real-ip")?.trim();
+    if (realIp) return realIp;
+  }
+
+  const directIp = request.headers.get("x-real-ip")?.trim();
+  if (directIp && process.env.RATE_LIMIT_TRUST_REAL_IP === "true") return directIp;
+
+  return "unknown";
+}
+
+export function getRateLimitHealth(): {
+  distributedConfigured: boolean;
+  production: boolean;
+  memoryFallbackAllowed: boolean;
+  trustProxyHeaders: boolean;
+  proxyTrustConfigured: boolean;
+} {
+  return {
+    distributedConfigured: hasUpstash,
+    production: isProduction,
+    memoryFallbackAllowed: allowMemoryFallback,
+    trustProxyHeaders,
+    proxyTrustConfigured: !isProduction || trustProxyHeaders || process.env.RATE_LIMIT_TRUST_REAL_IP === "true",
+  };
 }
 
 export async function checkRateLimit(

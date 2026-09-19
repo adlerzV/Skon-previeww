@@ -50,7 +50,12 @@ const Context = createContext<AdminContextValue>({
   refresh: async () => {},
 });
 
-export function AdminContextProvider({ children }: { children: ReactNode }) {
+export function AdminContextProvider({ children, initialContext }: { children: ReactNode; initialContext?: {
+  user: AdminUser;
+  permissions: string[];
+  summary: AdminSummary;
+  tickets: AdminContextValue["tickets"];
+} }) {
   const router = useRouter();
   const [state, setState] = useState<Omit<AdminContextValue, "refresh">>({
     loading: true,
@@ -58,6 +63,13 @@ export function AdminContextProvider({ children }: { children: ReactNode }) {
     permissions: [],
     summary: EMPTY_SUMMARY,
     tickets: [],
+    ...(initialContext ? {
+      loading: false,
+      user: initialContext.user,
+      permissions: initialContext.permissions,
+      summary: initialContext.summary,
+      tickets: initialContext.tickets,
+    } : {}),
   });
 
   const refresh = useCallback(async () => {
@@ -94,7 +106,7 @@ export function AdminContextProvider({ children }: { children: ReactNode }) {
 
   }, [router]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { if (!initialContext) void refresh(); }, [initialContext, refresh]);
 
   const value = useMemo<AdminContextValue>(() => ({ ...state, refresh }), [state, refresh]);
   return <Context.Provider value={value}>{children}</Context.Provider>;

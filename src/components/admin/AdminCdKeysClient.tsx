@@ -27,9 +27,10 @@ interface Data {
 
 const LABELS: Record<string, string> = { available: "موجود", reserved: "رزروشده", used: "مصرف‌شده", duplicate: "تکراری", decrypt_failed: "خطای رمزگشایی" };
 
-export default function AdminCdKeysClient() {
+export default function AdminCdKeysClient({ initial }: { initial?: Data }) {
   const { permissions } = useAdminContext();
-  const [data, setData] = useState<Data>({ nodes: [], pageInfo: { hasNextPage: false, endCursor: null }, summary: { available: 0, reserved: 0, used: 0, failed: 0, total: 0 } });
+  const empty: Data = { nodes: [], pageInfo: { hasNextPage: false, endCursor: null }, summary: { available: 0, reserved: 0, used: 0, failed: 0, total: 0 } };
+  const [data, setData] = useState<Data>(initial ?? empty);
   const [status, setStatus] = useState("all");
   const [productId, setProductId] = useState("");
   const [variationId, setVariationId] = useState("");
@@ -53,7 +54,7 @@ export default function AdminCdKeysClient() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { if (!initial) void load(); }, [initial]);
 
   const importKeys = async () => {
     if (!productId || !variationId || !keys.trim()) return;
