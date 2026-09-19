@@ -4,9 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import type { VariationCard } from "@/lib/graphql";
-
-const BATTLETAG_REGEX = /^[A-Za-z\u0600-\u06FF0-9]{2,12}#\d{4,7}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { BATTLETAG_REGEX, EMAIL_REGEX } from "./validation";
 
 export type DeliveryType = "direct" | "gift" | "code";
 

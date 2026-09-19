@@ -15,6 +15,14 @@ import VariationSelector from "@/components/product/VariationSelector";
 import ProductStickyBar, { type DeliveryOption } from "@/components/product/ProductStickyBar";
 import { useProductDelivery, type DeliveryType } from "@/components/product/useProductDelivery";
 import { useToast } from "@/context/ToastContext";
+import {
+  buildGroupedAttributes,
+  findFirstValidAttributes,
+  findMatchingVariations,
+  findRegionInfo,
+  hasStock,
+  matchesRegion,
+} from "./variationMatcher";
 
 interface Props {
   product: ProductNode;
@@ -24,49 +32,6 @@ interface Props {
   children?: React.ReactNode;
 }
 
-function isCodeViable(v: VariationCard): boolean {
-  if (v.parsedCodePrice == null || v.parsedCodePrice === "disabled") return false;
-  if (typeof v.codeStockCount === "number" && v.codeStockCount <= 0) return false;
-  return true;
-}
-
-function hasStock(v: VariationCard): boolean {
-  return (
-    v.parsedPrice != null ||
-    (v.parsedGiftPrice != null && v.parsedGiftPrice !== "disabled") ||
-    isCodeViable(v)
-  );
-}
-
-function isRegionAttr(name: string): boolean {
-  const n = name.replace("pa_", "").replace("attribute_", "").toLowerCase();
-  return n.includes("region") || n.includes("ریجن");
-}
-
-function isDeliveryAttr(name: string, values: string[]): boolean {
-  const n = normalize(name);
-  if (
-    n.includes("delivery") ||
-    n.includes("تحویل") ||
-    n.includes("روش") ||
-    n.includes("method")
-  )
-    return true;
-  return values.some((v) => {
-    const val = normalize(v);
-    return (
-      val.includes("گیفت") ||
-      val.includes("مستقیم") ||
-      val.includes("کد") ||
-      val.includes("gift") ||
-      val.includes("direct")
-    );
-  });
-}
-
-function normalize(s: string): string {
-  return s.replace(/ي/g, "ی").replace(/ك/g, "ک").toLowerCase();
-}
 function stripSizeSuffix(url: string): string {
   return url.replace(/-\d+x\d+(?=\.[a-zA-Z0-9]+(?:[?#].*)?$)/, "");
 }
@@ -115,120 +80,27 @@ export default function ProductPageClient({
       ? "eu-global"
       : activeRegion;
 
-  const groupedAttributes = useMemo(() => {
-    const map = new Map<string, Map<string, string>>();
+  const groupedAttributes = useMemo(() => buildGroupedAttributes(variations), [variations]);
 
-    for (const v of variations) {
-      for (const attr of v.attributes ?? []) {
-        if (!map.has(attr.name)) map.set(attr.name, new Map());
-        if (!map.get(attr.name)!.has(attr.value)) {
-          map.get(attr.name)!.set(attr.value, attr.flagUrl ?? "");
-        }
-      }
-    }
+  const regionInfo = useMemo(
+    () => findRegionInfo(variations, effectiveRegion),
+    [variations, effectiveRegion]
+  );
 
-    const result: { name: string; values: { value: string; flagUrl: string }[] }[] = [];
-
-    for (const [name, valMap] of map) {
-      const vals = Array.from(valMap.entries()).map(([value, flagUrl]) => ({
-        value,
-        flagUrl,
-      }));
-
-      if (!isDeliveryAttr(name, vals.map((v) => v.value)) && !isRegionAttr(name)) {
-        result.push({ name, values: vals });
-      }
-    }
-
-    return result;
-  }, [variations]);
-
-  const regionInfo = useMemo<{ name: string; value: string } | null>(() => {
-    let attrName = "";
-    let matchedValue = "";
-    const regionLower = effectiveRegion.toLowerCase();
-
-    outer: for (const v of variations) {
-      for (const a of v.attributes ?? []) {
-        if (!isRegionAttr(a.name)) continue;
-        attrName = a.name;
-        const valLower = a.value.toLowerCase();
-        const slugLower = a.slug?.toLowerCase() ?? "";
-
-        const matched =
-          valLower === regionLower ||
-          slugLower === regionLower ||
-          ((regionLower === "eu" || regionLower === "eu-global") &&
-            (valLower.includes("eu") || valLower.includes("اروپا") || slugLower.includes("eu"))) ||
-          (regionLower === "us" &&
-            (valLower.includes("us") ||
-              valLower.includes("آمریکا") ||
-              valLower.includes("امریکا") ||
-              slugLower === "us"));
-
-        if (matched) {
-          matchedValue = a.value;
-          break outer;
-        }
-      }
-    }
-
-    if (!matchedValue && attrName) {
-      for (const v of variations) {
-        const found = v.attributes?.find((a) => isRegionAttr(a.name));
-        if (found) {
-          matchedValue = found.value;
-          break;
-        }
-      }
-    }
-
-    return attrName && matchedValue ? { name: attrName, value: matchedValue } : null;
-  }, [variations, effectiveRegion]);
-
-  const findFirstValidAttributes = useCallback(
-    (targetEdition?: string): Record<string, string> => {
-      const result: Record<string, string> = {};
-      if (regionInfo) result[regionInfo.name] = regionInfo.value;
-      if (variations.length === 0 || groupedAttributes.length === 0) return result;
-
-      for (let i = 0; i < groupedAttributes.length; i++) {
-        const group = groupedAttributes[i];
-
-        if (i === 0 && targetEdition && group.values.some((v) => v.value === targetEdition)) {
-          result[group.name] = targetEdition;
-          continue;
-        }
-
-        const valid = group.values.find((candidate) =>
-          variations.some((v) => {
-            const matchesPrev = groupedAttributes
-              .slice(0, i)
-              .every((g) => v.attributes?.some((a) => a.name === g.name && a.value === result[g.name]));
-            const matchesCurrent = v.attributes?.some((a) => a.name === group.name && a.value === candidate.value);
-            const matchesRegion = regionInfo
-              ? v.attributes?.some((a) => a.name === regionInfo.name && a.value === regionInfo.value)
-              : true;
-            return matchesPrev && matchesCurrent && matchesRegion && hasStock(v);
-          })
-        );
-
-        result[group.name] = valid?.value ?? group.values[0]?.value ?? "";
-      }
-
-      return result;
-    },
+  const getFirstValidAttributes = useCallback(
+    (targetEdition?: string) =>
+      findFirstValidAttributes(variations, groupedAttributes, regionInfo, targetEdition),
     [variations, groupedAttributes, regionInfo]
   );
 
   const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>(() =>
-    findFirstValidAttributes(initialEdition)
+    getFirstValidAttributes(initialEdition)
   );
 
   useEffect(() => {
-    setSelectedAttrs(findFirstValidAttributes(initialEdition));
+    setSelectedAttrs(getFirstValidAttributes(initialEdition));
     setSelectedGalleryImage(null);
-  }, [findFirstValidAttributes, initialEdition, product.databaseId]);
+  }, [getFirstValidAttributes, initialEdition, product.databaseId]);
 
   const combinedAggregateVar = useMemo((): VariationCard | null => {
     if (variations.length === 0) {
@@ -253,23 +125,12 @@ export default function ProductPageClient({
       };
     }
 
-    const matching = variations.filter((v) => {
-      const matchesVisible = groupedAttributes.every((g) => {
-        const attr = v.attributes?.find((a) => a.name === g.name);
-        return attr ? attr.value === selectedAttrs[g.name] : true;
-      });
-      const matchesRegion = regionInfo
-        ? v.attributes?.some((a) => a.name === regionInfo.name && a.value === regionInfo.value)
-        : true;
-      return matchesVisible && matchesRegion;
-    });
-
-    const candidates =
-      matching.length > 0
-        ? matching
-        : variations.filter((v) =>
-            regionInfo ? v.attributes?.some((a) => a.name === regionInfo.name && a.value === regionInfo.value) : true
-          );
+    const candidates = findMatchingVariations(
+      variations,
+      groupedAttributes,
+      selectedAttrs,
+      regionInfo
+    );
 
     if (candidates.length === 0) return variations[0] ?? null;
 
@@ -407,13 +268,10 @@ export default function ProductPageClient({
         for (let i = changeIdx + 1; i < groupedAttributes.length; i++) {
           const nextGroup = groupedAttributes[i];
           const stillValid = variations.some((v) => {
-            const upToHere = groupedAttributes
+            const matchesUpToHere = groupedAttributes
               .slice(0, i + 1)
               .every((g) => v.attributes?.some((a) => a.name === g.name && a.value === draft[g.name]));
-            const matchesRegion = regionInfo
-              ? v.attributes?.some((a) => a.name === regionInfo.name && a.value === regionInfo.value)
-              : true;
-            return upToHere && matchesRegion && hasStock(v);
+            return matchesUpToHere && matchesRegion(v, regionInfo) && hasStock(v);
           });
 
           if (!stillValid) {
@@ -423,10 +281,7 @@ export default function ProductPageClient({
                   .slice(0, i)
                   .every((g) => v.attributes?.some((a) => a.name === g.name && a.value === draft[g.name]));
                 const matchesCand = v.attributes?.some((a) => a.name === nextGroup.name && a.value === cand.value);
-                const matchesRegion = regionInfo
-                  ? v.attributes?.some((a) => a.name === regionInfo.name && a.value === regionInfo.value)
-                  : true;
-                return pastLayers && matchesCand && matchesRegion && hasStock(v);
+                return pastLayers && matchesCand && matchesRegion(v, regionInfo) && hasStock(v);
               })
             );
             draft[nextGroup.name] = fallback?.value ?? nextGroup.values[0]?.value ?? "";

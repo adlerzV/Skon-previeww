@@ -7,8 +7,7 @@ import { PriceDisplay } from "./PriceDisplay";
 import { useToast } from "@/context/ToastContext";
 import ConfettiBurst from "@/components/ui/ConfettiBurst";
 import type { ProductPurchaseState, DeliveryType } from "./useProductDelivery";
-
-const BATTLETAG_REGEX = /^[A-Za-z\u0600-\u06FF0-9]{2,12}#\d{4,7}$/;
+import { BATTLETAG_REGEX } from "./validation";
 
 function DirectForm({
   email,

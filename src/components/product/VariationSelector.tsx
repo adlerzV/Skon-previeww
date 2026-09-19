@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Image from "next/image";
 import { VariationCard } from "@/lib/graphql";
 import { PriceDisplay } from "./PriceDisplay";
+import { hasStock, isCodeViable, matchesRegion, matchesThroughGroup } from "./variationMatcher";
 
 interface AttributeValue {
   value: string;
@@ -29,20 +30,6 @@ interface OptionState {
   regularPrice: number | null;
 }
 
-function isCodeViable(v: VariationCard): boolean {
-  if (v.parsedCodePrice == null || v.parsedCodePrice === "disabled") return false;
-  if (typeof v.codeStockCount === "number" && v.codeStockCount <= 0) return false;
-  return true;
-}
-
-function checkStockGlobally(v: VariationCard): boolean {
-  return (
-    v.parsedPrice != null ||
-    (v.parsedGiftPrice != null && v.parsedGiftPrice !== "disabled") ||
-    isCodeViable(v)
-  );
-}
-
 export default function VariationSelector({
   groupedAttributes,
   selectedAttrs,
@@ -59,20 +46,14 @@ export default function VariationSelector({
         let best: { price: number; regularPrice: number | null } | null = null;
 
         for (const v of variations) {
-          if (regionInfo) {
-            const hasRegion = v.attributes?.some(
-              (a) => a.name === regionInfo.name && a.value === regionInfo.value
-            );
-            if (!hasRegion) continue;
-          }
+          if (!matchesRegion(v, regionInfo ?? null)) continue;
 
-          const matchesPreceding = groupedAttributes
-            .slice(0, groupIndex)
-            .every((prevGroup) =>
-              v.attributes?.some(
-                (a) => a.name === prevGroup.name && a.value === selectedAttrs[prevGroup.name]
-              )
-            );
+          const matchesPreceding = matchesThroughGroup(
+            v,
+            groupedAttributes,
+            selectedAttrs,
+            groupIndex
+          );
           if (!matchesPreceding) continue;
 
           const matchesCurrent = v.attributes?.some(
@@ -80,7 +61,7 @@ export default function VariationSelector({
           );
           if (!matchesCurrent) continue;
 
-          if (!checkStockGlobally(v)) continue;
+          if (!hasStock(v)) continue;
           available = true;
 
           const candidates: Array<{ price: number; regularPrice: number | null }> = [];
@@ -139,7 +120,7 @@ export default function VariationSelector({
                   <button
                     key={opt.value}
                     type="button"
-                  onClick={() => state.available && onAttributeSelect(group.name, opt.value)}
+                    onClick={() => state.available && onAttributeSelect(group.name, opt.value)}
                     disabled={!state.available}
                     className={`w-full flex items-center gap-3 p-6 text-right transition-all duration-150 border border-brand-surface_hover ${
                       isSelected

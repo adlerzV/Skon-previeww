@@ -4,8 +4,7 @@ import { fetchGraphQLWithErrors } from "@/lib/graphql/rawFetch";
 import { SUBMIT_CUSTOMER_ORDER_MUTATION } from "@/lib/graphql/auth";
 import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
-
-const MAX_CART_QUANTITY = 10;
+import { MAX_CART_QUANTITY } from "@/lib/cartLimits";
 
 interface CheckoutCartItem {
   productId: number;

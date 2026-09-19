@@ -4,10 +4,10 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { getClientCookie, setClientCookie, removeClientCookie } from "@/lib/cookies";
 import { saveCredentials, getCredentials, removeCredentials } from "@/lib/secureCartStorage";
 import { useToast } from "@/context/ToastContext";
+import { MAX_CART_QUANTITY } from "@/lib/cartLimits";
 
 const CART_COOKIE = "a2b_cart";
 const CART_COOKIE_DAYS = 30;
-export const MAX_CART_QUANTITY = 10;
 
 const CAP_MESSAGE = `کاربر گرامی، سقف خرید ${MAX_CART_QUANTITY.toLocaleString("fa-IR")} عدد می‌باشد`;
 

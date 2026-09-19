@@ -53,6 +53,11 @@ export interface ProductNode {
   price?: string;
   regularPrice?: string;
   salePrice?: string;
+  archivePricing?: {
+    price?: string | null;
+    regularPrice?: string | null;
+    isAvailableInRegion?: boolean | null;
+  } | null;
   parsedPrice: number | null;
   parsedRegularPrice: number | null;
   isAvailableInRegion?: boolean;

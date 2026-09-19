@@ -33,34 +33,10 @@ export const PRODUCT_CARD_FIELDS = `
     }
 
     ... on VariableProduct {
-      price
-      regularPrice
-      salePrice
-
-      variationCards {
-        databaseId
-        name
-        slug
+      archivePricing(regionSlug: $regionSlug) {
         price
         regularPrice
-        salePrice
-        imageUrl
-        regionSlug
-
-        giftPriceToman
-        giftRegularPriceToman
-
-        codePriceToman
-        codeRegularPriceToman
-        codeStockCount
-
-        attributes {
-          name
-          taxonomy
-          value
-          slug
-          flagUrl
-        }
+        isAvailableInRegion
       }
     }
   }

@@ -2,40 +2,12 @@ import "server-only";
 import DOMPurify from "isomorphic-dompurify";
 import { parsePrice } from "./client";
 import { ProductNode, VariationCard } from "./types";
+import { regionsMatch } from "./regions";
 
 export const sanitizeHtml = (html?: string | null): string | undefined => {
   if (!html) return html ?? undefined;
   return DOMPurify.sanitize(html);
 };
-
-const REGION_ALIASES: Record<string, string[]> = {
-  eu: ["eu", "eu-global", "اروپا", "europe"],
-  us: ["us", "امریکا", "آمریکا", "america", "usa"],
-  tr: ["tr", "ترکیه", "turkey"],
-  ua: ["ua", "اوکراین", "ukraine"],
-};
-
-function normalizeRegionToken(token?: string | null): string {
-  if (!token) return "";
-
-  const lower = token.trim().toLowerCase();
-
-  for (const [canon, aliases] of Object.entries(REGION_ALIASES)) {
-    if (aliases.some((alias) => lower === alias || lower.includes(alias))) {
-      return canon;
-    }
-  }
-
-  return lower;
-}
-
-export function regionsMatch(
-  a?: string | null,
-  b?: string | null
-): boolean {
-  if (!a || !b) return false;
-  return normalizeRegionToken(a) === normalizeRegionToken(b);
-}
 
 type PriceTier = {
   price: number;
@@ -128,6 +100,26 @@ export const formatProducts = (
   const formattedProducts: ProductNode[] = [];
 
   for (const product of products) {
+    if (archiveMode && product.archivePricing) {
+      const parsedPrice = parsePrice(product.archivePricing.price ?? null);
+      const parsedRegularPrice = parsePrice(product.archivePricing.regularPrice ?? null);
+      const archiveSafeProduct = { ...product };
+      delete archiveSafeProduct.shortDescription;
+      delete archiveSafeProduct.description;
+      delete archiveSafeProduct.secondaryGallery;
+      delete archiveSafeProduct.archivePricing;
+
+      formattedProducts.push({
+        ...archiveSafeProduct,
+        parsedPrice,
+        parsedRegularPrice,
+        variationCards: [],
+        isVariation: true,
+        isAvailableInRegion: product.archivePricing.isAvailableInRegion !== false,
+      });
+      continue;
+    }
+
     const rawVariations = product.variationCards || [];
 
     let finalPrice: number | null = null;
