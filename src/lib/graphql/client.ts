@@ -59,7 +59,8 @@ export async function fetchGraphQL(
   authToken?: string,
   sessionId?: string,
   bootstrapProof?: string,
-  previousAuthToken?: string
+  previousAuthToken?: string,
+  extraHeaders: Record<string, string> = {}
 ) {
   const strategy: CacheStrategy =
     typeof cacheStrategy === "string"
@@ -87,6 +88,7 @@ export async function fetchGraphQL(
       ...(boundSessionId ? { "X-BTL-Session-ID": boundSessionId } : {}),
       ...(bootstrapProof ? { "X-BTL-Session-Bootstrap": bootstrapProof } : {}),
       ...(previousAuthToken ? { "X-BTL-Previous-Authorization": `Bearer ${previousAuthToken}` } : {}),
+      ...extraHeaders,
       ...(hostHeader ? { Host: hostHeader } : {}),
     },
     body: JSON.stringify({ query, variables }),
