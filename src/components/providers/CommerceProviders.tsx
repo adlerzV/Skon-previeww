@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
 import AuthRefresher from "@/components/account/AuthRefresher";
@@ -11,7 +11,9 @@ export default function CommerceProviders({ children }: { children: ReactNode })
     <ToastProvider>
       <CartProvider>
         <AuthRefresher />
-        <TopLoader />
+        <Suspense fallback={null}>
+          <TopLoader />
+        </Suspense>
         {children}
       </CartProvider>
     </ToastProvider>
