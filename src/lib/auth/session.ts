@@ -63,15 +63,15 @@ const VIEWER_WITH_WISHLIST_QUERY = `
   }
 `;
 
-export async function getAuthToken(): Promise<string | null> {
+export const getAuthToken = cache(async (): Promise<string | null> => {
   const cookieStore = await cookies();
   return cookieStore.get(AUTH_TOKEN_COOKIE)?.value ?? null;
-}
+});
 
-export async function getSessionId(): Promise<string | null> {
+export const getSessionId = cache(async (): Promise<string | null> => {
   const cookieStore = await cookies();
   return cookieStore.get(SESSION_ID_COOKIE)?.value ?? null;
-}
+});
 
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const token = await getAuthToken();

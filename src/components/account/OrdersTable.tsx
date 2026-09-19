@@ -32,6 +32,13 @@ function getMeta(item: LineItem, key: string): string | undefined {
 }
 
 export default function OrdersTable({ orders, downloadableItems = [] }: { orders: OrderNode[]; downloadableItems?: DownloadableItem[] }) {
+  const downloadsByProduct = new Map<number, DownloadableItem>();
+  for (const download of downloadableItems) {
+    const productId = download.product?.databaseId;
+    if (productId != null && !downloadsByProduct.has(productId)) {
+      downloadsByProduct.set(productId, download);
+    }
+  }
   if (!orders?.length) {
     return <div className="bg-brand-surface border border-brand-surface_hover p-10 text-center text-brand-m_khonsa">هنوز هیچ سفارشی ثبت نشده است.</div>;
   }
@@ -71,7 +78,9 @@ export default function OrdersTable({ orders, downloadableItems = [] }: { orders
                     const deliveryMethod = getMeta(item, "روش تحویل");
                     const region = getMeta(item, "ریجن");
                     const variationName = getMeta(item, "ویژگی");
-                    const download = downloadableItems.find((d) => d.product?.databaseId === item.product?.node?.databaseId);
+                    const download = item.product?.node?.databaseId != null
+                      ? downloadsByProduct.get(item.product.node.databaseId)
+                      : undefined;
 
                     return (
                       <tr key={item.id} className="border-b border-brand-surface_hover/60 last:border-0">

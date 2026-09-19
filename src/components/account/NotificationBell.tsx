@@ -18,14 +18,20 @@ export default function NotificationBell() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const unreadCount = items.filter((n) => !n.isRead).length;
 
   const fetchNotifications = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
-      const res = await fetch("/api/account/notifications", { cache: "no-store" });
+      const res = await fetch("/api/account/notifications", { cache: "no-store", signal: controller.signal });
       const data = await res.json();
-      setItems(data?.notifications ?? []);
-    } catch {}
+      if (!controller.signal.aborted) setItems(data?.notifications ?? []);
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) return;
+    }
   }, []);
 
   useEffect(() => {
@@ -56,6 +62,7 @@ export default function NotificationBell() {
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       stopPolling();
+      abortRef.current?.abort();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [fetchNotifications]);

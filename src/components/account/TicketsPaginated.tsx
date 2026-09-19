@@ -54,22 +54,32 @@ export default function TicketsPaginated({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestAbortRef = useRef<AbortController | null>(null);
   const isFirstRun = useRef(true);
 
   const fetchTickets = async (nextSearch: string, nextStatus: string) => {
+    requestAbortRef.current?.abort();
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
       if (nextSearch.trim()) params.set("search", nextSearch.trim());
       if (nextStatus !== "ALL") params.set("status", nextStatus);
-      const res = await fetch(`/api/account/tickets?${params.toString()}`, { cache: "no-store" });
+      const res = await fetch(`/api/account/tickets?${params.toString()}`, { cache: "no-store", signal: controller.signal });
       const data = await res.json();
-      setTickets(data.tickets ?? []);
-      setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null });
+      if (!controller.signal.aborted) {
+        setTickets(data.tickets ?? []);
+        setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null });
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) setIsLoading(false);
     }
   };
+
+  useEffect(() => () => requestAbortRef.current?.abort(), [requestAbortRef]);
 
   useEffect(() => {
     if (isFirstRun.current) {
@@ -82,23 +92,31 @@ export default function TicketsPaginated({
     }, 400);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      requestAbortRef.current?.abort();
     };
   }, [search, statusFilter]);
 
   const handleLoadMore = async () => {
-    if (!pageInfo.endCursor) return;
+    if (!pageInfo.endCursor || isLoading) return;
+    requestAbortRef.current?.abort();
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
       if (search.trim()) params.set("search", search.trim());
       if (statusFilter !== "ALL") params.set("status", statusFilter);
       params.set("after", pageInfo.endCursor);
-      const res = await fetch(`/api/account/tickets?${params.toString()}`, { cache: "no-store" });
+      const res = await fetch(`/api/account/tickets?${params.toString()}`, { cache: "no-store", signal: controller.signal });
       const data = await res.json();
-      setTickets((prev) => [...prev, ...(data.tickets ?? [])]);
-      setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null });
+      if (!controller.signal.aborted) {
+        setTickets((prev) => [...prev, ...(data.tickets ?? [])]);
+        setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null });
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) setIsLoading(false);
     }
   };
 

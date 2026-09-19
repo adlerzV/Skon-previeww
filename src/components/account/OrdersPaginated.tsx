@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Loader2, Search } from "lucide-react";
 import OrdersTable from "./OrdersTable";
 import FilterTabs from "@/components/ui/FilterTabs";
@@ -32,32 +32,50 @@ export default function OrdersPaginated({
   const [status, setStatus] = useState("ALL");
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const requestAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => requestAbortRef.current?.abort(), []);
 
   const handleStatusChange = async (newStatus: string) => {
+    requestAbortRef.current?.abort();
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
     setStatus(newStatus);
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/account/orders?status=${newStatus}`, { cache: "no-store" });
+      const res = await fetch(`/api/account/orders?status=${newStatus}`, { cache: "no-store", signal: controller.signal });
       const data = await res.json();
-      setOrders(data.orders ?? []);
-      setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null });
+      if (!controller.signal.aborted) {
+        setOrders(data.orders ?? []);
+        setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null });
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) setIsLoading(false);
     }
   };
 
   const handleLoadMore = async () => {
-    if (!pageInfo.endCursor) return;
+    if (!pageInfo.endCursor || isLoading) return;
+    requestAbortRef.current?.abort();
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
     setIsLoading(true);
     try {
       const res = await fetch(`/api/account/orders?status=${status}&after=${encodeURIComponent(pageInfo.endCursor)}`, {
         cache: "no-store",
+        signal: controller.signal,
       });
       const data = await res.json();
-      setOrders((prev) => [...prev, ...(data.orders ?? [])]);
-      setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null });
+      if (!controller.signal.aborted) {
+        setOrders((prev) => [...prev, ...(data.orders ?? [])]);
+        setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null });
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) setIsLoading(false);
     }
   };
 
